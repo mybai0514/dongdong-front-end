@@ -39,3 +39,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ====== 推荐补充 ======
+# Cloudflare Wrangler local state & temp
+.wrangler/
+
+# Next.js cache
+.next/cache/
+
+# Drizzle meta (optional)
+db/migrations/meta/
+
+# IDE specifics
+.vscode/
+.idea/
+*.swp
+
+# For future OpenNext deployment (uncomment when you add @opennextjs/cloudflare)
+# .open-next/

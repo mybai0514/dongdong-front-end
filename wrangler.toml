@@ -5,15 +5,4 @@ compatibility_date = "2024-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "dongdong-db"
-database_id = "your-database-id"
-
-[[kv_namespaces]]
-binding = "CACHE"
-id = "your-kv-id"
-
-[[r2_buckets]]
-binding = "AVATARS"
-bucket_name = "dongdong-avatars"
-
-[env.production]
-vars = { ENVIRONMENT = "production" }
+database_id = "259e4b39-fac5-4850-a3c9-d30c4f280268"
