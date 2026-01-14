@@ -12,7 +12,7 @@ export default function Home() {
           <div className="text-center space-y-6 max-w-3xl mx-auto">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
               找到你的
-              <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                 {" "}游戏队友
               </span>
             </h1>
@@ -86,7 +86,7 @@ export default function Home() {
       {/* CTA Section */}
       <section className="py-20">
         <div className="container">
-          <Card className="bg-gradient-to-r from-primary/10 to-purple-600/10 border-none">
+          <Card className="bg-linear-to-r from-primary/10 to-purple-600/10 border-none">
             <CardContent className="pt-12 pb-12">
               <div className="text-center space-y-6 max-w-2xl mx-auto">
                 <h2 className="text-3xl font-bold">准备好开始了吗？</h2>
