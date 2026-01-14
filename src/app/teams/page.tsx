@@ -182,7 +182,7 @@ export default function TeamsPage() {
 
         {/* 游戏筛选 */}
         <Select value={selectedGame} onValueChange={setSelectedGame}>
-          <SelectTrigger className="w-full md:w-[200px]">
+          <SelectTrigger className="w-full md:w-50">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="选择游戏" />
           </SelectTrigger>
