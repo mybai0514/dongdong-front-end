@@ -319,6 +319,15 @@ app.get('/api/teams/:id', async (c) => {
 // 创建新的组队（支持新字段）
 app.post('/api/teams', async (c) => {
   try {
+    // ✅ 添加更好的错误处理
+    let body
+    try {
+      body = await c.req.json()
+    } catch (parseError) {
+      console.error('JSON 解析错误:', parseError)
+      return c.json({ error: '请求数据格式错误' }, 400)
+    }
+
     const { 
       game, 
       title, 
@@ -328,11 +337,14 @@ app.post('/api/teams', async (c) => {
       contact_value,
       creator_id,
       max_members 
-    } = await c.req.json()
+    } = body
     
     // 验证必填字段
     if (!game || !title || !contact_method || !contact_value || !creator_id) {
-      return c.json({ error: '游戏、标题、联系方式和创建者ID不能为空' }, 400)
+      return c.json({ 
+        error: '游戏、标题、联系方式和创建者ID不能为空',
+        received: { game, title, contact_method, contact_value, creator_id }
+      }, 400)
     }
 
     const db = drizzle(c.env.DB)
@@ -340,17 +352,19 @@ app.post('/api/teams', async (c) => {
     const result = await db.insert(teams).values({
       game,
       title,
-      description,
-      rank_requirement,
+      description: description || null,
+      rank_requirement: rank_requirement || null,
       contact_method,
       contact_value,
       creator_id,
       status: 'open',
-      member_count: 1, // 创建者自己
+      member_count: 1,
       max_members: max_members || 5,
       created_at: new Date(),
       updated_at: new Date()
     }).run()
+
+    console.log('✅ 组队创建成功:', result.meta.last_row_id)
 
     return c.json({ 
       success: true, 
@@ -359,7 +373,7 @@ app.post('/api/teams', async (c) => {
     })
   } catch (error) {
     console.error('创建组队错误:', error)
-    return c.json({ error: '创建组队失败' }, 500)
+    return c.json({ error: '创建组队失败', details: String(error) }, 500)
   }
 })
 
