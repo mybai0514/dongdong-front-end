@@ -361,25 +361,28 @@ export default function TeamsPage() {
       <Dialog open={contactDialog.open} onOpenChange={(open) => setContactDialog({ open })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>联系队长</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              加入成功
+            </DialogTitle>
             <DialogDescription>
-              使用以下联系方式联系队长，开始你的游戏之旅
+              你已成功加入队伍，使用以下联系方式联系队长开始游戏吧
             </DialogDescription>
           </DialogHeader>
           <div className="py-6">
             {contactDialog.contact && (
-              <div className="flex items-center justify-center space-x-4 text-lg">
+              <div className="flex items-center justify-center space-x-4 text-lg bg-muted/50 rounded-lg p-4">
                 <MessageCircle className="h-6 w-6 text-primary" />
                 <div>
                   <span className="font-semibold">{getContactIcon(contactDialog.contact.method)}：</span>
-                  <span className="ml-2 text-primary">{contactDialog.contact.value}</span>
+                  <span className="ml-2 text-primary select-all">{contactDialog.contact.value}</span>
                 </div>
               </div>
             )}
           </div>
           <DialogFooter>
             <Button onClick={() => setContactDialog({ open: false })}>
-              关闭
+              知道了
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -473,8 +476,8 @@ function TeamCard({
           <div className="flex items-center text-muted-foreground">
             <MessageCircle className="h-4 w-4 mr-2 shrink-0" />
             <span className="truncate">
-              {memberStatus?.isMember 
-                ? `${getContactIcon(team.contact_method)}: ${team.contact_value}`
+              {memberStatus?.isMember && memberStatus.contact
+                ? `${getContactIcon(memberStatus.contact.method)}: ${memberStatus.contact.value}`
                 : '加入后可见联系方式'
               }
             </span>

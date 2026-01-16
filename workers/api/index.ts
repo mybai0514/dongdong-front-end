@@ -3,7 +3,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { drizzle } from 'drizzle-orm/d1'
-import { eq, desc, or } from 'drizzle-orm'
+import { eq, desc, or, and } from 'drizzle-orm'
 import { teams, users, feedback, sessions, teamMembers } from '../../db/schema'
 import bcrypt from 'bcryptjs'
 
@@ -456,14 +456,14 @@ app.post('/api/teams/:id/join', async (c) => {
     const existingMember = await db.select()
       .from(teamMembers)
       .where(
-        or(
+        and(
           eq(teamMembers.team_id, Number(teamId)),
           eq(teamMembers.user_id, user.id)
         )
       )
       .get()
 
-    if (existingMember && existingMember.team_id === Number(teamId) && existingMember.user_id === user.id) {
+    if (existingMember) {
       return c.json({ error: '你已经加入该队伍了' }, 400)
     }
 
@@ -544,14 +544,14 @@ app.get('/api/teams/:id/check-membership', async (c) => {
     const member = await db.select()
       .from(teamMembers)
       .where(
-        or(
+        and(
           eq(teamMembers.team_id, Number(teamId)),
           eq(teamMembers.user_id, user.id)
         )
       )
       .get()
 
-    if (member && member.team_id === Number(teamId) && member.user_id === user.id) {
+    if (member) {
       return c.json({
         isMember: true,
         isCreator: false,
