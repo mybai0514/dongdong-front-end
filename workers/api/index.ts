@@ -646,6 +646,148 @@ app.post('/api/teams/:id/leave', async (c) => {
   }
 })
 
+//========================队伍管理相关API==============================
+
+// 获取队伍成员列表
+app.get('/api/teams/:id/members', async (c) => {
+  try {
+    const teamId = c.req.param('id')
+    const authHeader = c.req.header('Authorization')
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ error: '未登录' }, 401)
+    }
+
+    const token = authHeader.substring(7)
+    const db = drizzle(c.env.DB)
+
+    const user = await validateToken(db, token)
+    if (!user) {
+      return c.json({ error: '登录已过期' }, 401)
+    }
+
+    // 检查是否是队长
+    const team = await db.select().from(teams).where(eq(teams.id, Number(teamId))).get()
+    if (!team) {
+      return c.json({ error: '队伍不存在' }, 404)
+    }
+
+    if (team.creator_id !== user.id) {
+      return c.json({ error: '只有队长可以查看成员列表' }, 403)
+    }
+
+    // 获取成员列表（带用户名）
+    const memberRecords = await db.select({
+      id: teamMembers.id,
+      user_id: teamMembers.user_id,
+      joined_at: teamMembers.joined_at
+    })
+      .from(teamMembers)
+      .where(eq(teamMembers.team_id, Number(teamId)))
+      .all()
+
+    // 获取用户名
+    const membersWithUsername = await Promise.all(
+      memberRecords.map(async (member) => {
+        const memberUser = await db.select({ username: users.username })
+          .from(users)
+          .where(eq(users.id, member.user_id))
+          .get()
+        return {
+          ...member,
+          username: memberUser?.username || '未知用户'
+        }
+      })
+    )
+
+    return c.json(membersWithUsername)
+  } catch (error) {
+    console.error('获取成员列表错误:', error)
+    return c.json({ error: '获取成员列表失败' }, 500)
+  }
+})
+
+// 踢出成员
+app.delete('/api/teams/:id/members/:userId', async (c) => {
+  try {
+    const teamId = c.req.param('id')
+    const targetUserId = c.req.param('userId')
+    const authHeader = c.req.header('Authorization')
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ error: '未登录' }, 401)
+    }
+
+    const token = authHeader.substring(7)
+    const db = drizzle(c.env.DB)
+
+    const user = await validateToken(db, token)
+    if (!user) {
+      return c.json({ error: '登录已过期' }, 401)
+    }
+
+    // 检查是否是队长
+    const team = await db.select().from(teams).where(eq(teams.id, Number(teamId))).get()
+    if (!team) {
+      return c.json({ error: '队伍不存在' }, 404)
+    }
+
+    if (team.creator_id !== user.id) {
+      return c.json({ error: '只有队长可以踢出成员' }, 403)
+    }
+
+    // 不能踢出自己
+    if (Number(targetUserId) === user.id) {
+      return c.json({ error: '不能踢出自己' }, 400)
+    }
+
+    // 检查目标用户是否是队员
+    const member = await db.select()
+      .from(teamMembers)
+      .where(
+        and(
+          eq(teamMembers.team_id, Number(teamId)),
+          eq(teamMembers.user_id, Number(targetUserId))
+        )
+      )
+      .get()
+
+    if (!member) {
+      return c.json({ error: '该用户不是队伍成员' }, 400)
+    }
+
+    // 删除成员记录
+    await db.delete(teamMembers)
+      .where(
+        and(
+          eq(teamMembers.team_id, Number(teamId)),
+          eq(teamMembers.user_id, Number(targetUserId))
+        )
+      )
+      .run()
+
+    // 更新队伍人数
+    await db.update(teams)
+      .set({
+        member_count: team.member_count - 1,
+        status: 'open',
+        updated_at: new Date()
+      })
+      .where(eq(teams.id, Number(teamId)))
+      .run()
+
+    console.log(`✅ 队长 ${user.id} 踢出成员 ${targetUserId} 从队伍 ${teamId}`)
+
+    return c.json({
+      success: true,
+      message: '已踢出成员'
+    })
+  } catch (error) {
+    console.error('踢出成员错误:', error)
+    return c.json({ error: '踢出失败' }, 500)
+  }
+})
+
 // ==================== 个人中心 API ====================
 
 // 获取用户发起的队伍
