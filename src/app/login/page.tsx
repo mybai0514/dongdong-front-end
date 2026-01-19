@@ -1,60 +1,67 @@
-'use client';
+'use client'
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { GamepadIcon, Loader2 } from 'lucide-react';
-import { login, ApiError } from '@/lib/api';
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { GamepadIcon, Loader2 } from 'lucide-react'
+import { login, ApiError } from '@/lib/api'
+import { useAuth } from '@/hooks'
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/'
 
+  // 已登录则跳转
+  useAuth({
+    redirectTo: false,
+    redirectIfAuthenticated: redirect,
+  })
+
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-  });
+  })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
-    });
-    setError('');
-  };
+    })
+    setError('')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+    e.preventDefault()
+    setError('')
+    setLoading(true)
 
     try {
-      await login(formData);
-      router.push(redirect);
+      await login(formData)
+      router.push(redirect)
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message || '登录失败');
+        setError(err.message || '登录失败')
       } else {
-        setError('网络错误，请稍后重试');
+        setError('网络错误，请稍后重试')
       }
-      console.error('登录错误:', err);
+      console.error('登录错误:', err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-center min-h-[calc(100vh-4rem)] py-10">

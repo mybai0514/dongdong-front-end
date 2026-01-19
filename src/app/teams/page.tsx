@@ -33,7 +33,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import type { User, Team, MembershipStatus, ContactMethod } from '@/types'
-import { getTeams, joinTeam, checkMembership, ApiError, getStoredUser } from '@/lib/api'
+import { getTeams, joinTeam, checkMembership, ApiError } from '@/lib/api'
+import { useUser } from '@/hooks'
 
 // 游戏列表
 const GAMES = [
@@ -54,11 +55,11 @@ interface ContactInfo {
 }
 
 export default function TeamsPage() {
+  const user = useUser()
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedGame, setSelectedGame] = useState('全部')
-  const [user, setUser] = useState<User | null>(null)
 
   // 加入队伍相关状态
   const [joiningTeamId, setJoiningTeamId] = useState<number | null>(null)
@@ -66,14 +67,6 @@ export default function TeamsPage() {
     open: boolean
     contact?: ContactInfo
   }>({ open: false })
-
-  // 检查用户登录状态
-  useEffect(() => {
-    const userData = getStoredUser<User>()
-    if (userData) {
-      setUser(userData)
-    }
-  }, [])
 
   // 获取组队列表
   useEffect(() => {

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -37,17 +36,17 @@ import {
   getJoinedTeams,
   updateUser,
   leaveTeam,
-  logout,
-  getStoredUser,
-  setStoredUser,
   ApiError
 } from '@/lib/api'
-import type { User as UserType, Team } from '@/types'
+import { useAuth } from '@/hooks'
+import type { Team } from '@/types'
 
 export default function ProfilePage() {
-  const router = useRouter()
-  const [user, setUser] = useState<UserType | null>(null)
-  const [loading, setLoading] = useState(true)
+  // 使用 useAuth 处理认证，未登录自动跳转
+  const { user, loading, logout, updateUser: updateLocalUser } = useAuth({
+    redirectTo: '/login',
+  })
+
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -72,27 +71,18 @@ export default function ProfilePage() {
   }>({ open: false })
   const [leaving, setLeaving] = useState(false)
 
-  // 检查登录状态并获取用户信息
+  // 用户信息加载后，初始化表单和获取队伍数据
   useEffect(() => {
-    const userData = getStoredUser<UserType>()
-
-    if (!userData) {
-      router.push('/login?redirect=/profile')
-      return
+    if (user) {
+      setEditForm({
+        wechat: user.wechat || '',
+        qq: user.qq || '',
+        yy: user.yy || ''
+      })
+      fetchMyTeams(user.id)
+      fetchJoinedTeamsList()
     }
-
-    setUser(userData)
-    setEditForm({
-      wechat: userData.wechat || '',
-      qq: userData.qq || '',
-      yy: userData.yy || ''
-    })
-    setLoading(false)
-
-    // 获取我发起的队伍和加入的队伍
-    fetchMyTeams(userData.id)
-    fetchJoinedTeamsList()
-  }, [router])
+  }, [user])
 
   // 获取我发起的队伍
   const fetchMyTeams = async (userId: number) => {
@@ -127,9 +117,7 @@ export default function ProfilePage() {
     setSaving(true)
     try {
       await updateUser(user.id, editForm)
-      const updatedUser = { ...user, ...editForm }
-      setUser(updatedUser)
-      setStoredUser(updatedUser)
+      updateLocalUser(editForm)
       setEditing(false)
     } catch (error) {
       console.error('保存联系方式错误:', error)
@@ -163,13 +151,7 @@ export default function ProfilePage() {
 
   // 登出
   const handleLogout = async () => {
-    try {
-      await logout()
-    } catch (error) {
-      console.error('登出错误:', error)
-    } finally {
-      router.push('/login')
-    }
+    await logout()
   }
 
   // 格式化时间

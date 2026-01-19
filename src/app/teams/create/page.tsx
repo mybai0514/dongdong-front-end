@@ -16,8 +16,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ArrowLeft, Loader2, Plus } from 'lucide-react'
-import { createTeam, ApiError, getStoredUser } from '@/lib/api'
-import type { User, ContactMethod } from '@/types'
+import { createTeam, ApiError } from '@/lib/api'
+import { useAuth } from '@/hooks'
+import type { ContactMethod } from '@/types'
 
 // 游戏列表
 const GAMES = [
@@ -52,9 +53,9 @@ const CONTACT_METHODS = [
 
 export default function CreateTeamPage() {
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth({ redirectTo: '/login' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [user, setUser] = useState<User | null>(null)
 
   const [formData, setFormData] = useState<{
     game: string
@@ -74,36 +75,30 @@ export default function CreateTeamPage() {
     max_members: 5
   })
 
-  // 检查登录状态
+  // 自动填充用户的联系方式
   useEffect(() => {
-    const userData = getStoredUser<User>()
-    if (!userData) {
-      router.push('/login?redirect=/teams/create')
-      return
-    }
-    setUser(userData)
+    if (!user) return
 
-    // 自动填充用户的联系方式
-    if (userData.wechat) {
+    if (user.wechat) {
       setFormData(prev => ({
         ...prev,
         contact_method: 'wechat',
-        contact_value: userData.wechat || ''
+        contact_value: user.wechat || ''
       }))
-    } else if (userData.qq) {
+    } else if (user.qq) {
       setFormData(prev => ({
         ...prev,
         contact_method: 'qq',
-        contact_value: userData.qq || ''
+        contact_value: user.qq || ''
       }))
-    } else if (userData.yy) {
+    } else if (user.yy) {
       setFormData(prev => ({
         ...prev,
         contact_method: 'yy',
-        contact_value: userData.yy || ''
+        contact_value: user.yy || ''
       }))
     }
-  }, [router])
+  }, [user])
 
   // 当游戏改变时，重置段位要求
   const handleGameChange = (game: string) => {
@@ -159,7 +154,7 @@ export default function CreateTeamPage() {
     }
   }
 
-  if (!user) {
+  if (authLoading || !user) {
     return (
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">

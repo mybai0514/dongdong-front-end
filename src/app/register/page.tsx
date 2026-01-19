@@ -1,25 +1,33 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { GamepadIcon, Loader2 } from 'lucide-react';
-import { register, ApiError } from '@/lib/api';
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { GamepadIcon, Loader2 } from 'lucide-react'
+import { register, ApiError } from '@/lib/api'
+import { useAuth } from '@/hooks'
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const router = useRouter()
+
+  // 已登录则跳转到首页
+  useAuth({
+    redirectTo: false,
+    redirectIfAuthenticated: '/',
+  })
+
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const [formData, setFormData] = useState({
     username: '',
@@ -29,32 +37,32 @@ export default function RegisterPage() {
     wechat: '',
     qq: '',
     yy: '',
-  });
+  })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
-    });
-    setError('');
-  };
+    })
+    setError('')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+    e.preventDefault()
+    setError('')
 
     // 验证密码
     if (formData.password !== formData.confirmPassword) {
-      setError('两次输入的密码不一致');
-      return;
+      setError('两次输入的密码不一致')
+      return
     }
 
     if (formData.password.length < 6) {
-      setError('密码长度至少为 6 位');
-      return;
+      setError('密码长度至少为 6 位')
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
       await register({
@@ -64,19 +72,19 @@ export default function RegisterPage() {
         wechat: formData.wechat,
         qq: formData.qq,
         yy: formData.yy,
-      });
-      router.push('/');
+      })
+      router.push('/')
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message || '注册失败');
+        setError(err.message || '注册失败')
       } else {
-        setError('网络错误，请稍后重试');
+        setError('网络错误，请稍后重试')
       }
-      console.error('注册错误:', err);
+      console.error('注册错误:', err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-center min-h-[calc(100vh-4rem)] py-10">

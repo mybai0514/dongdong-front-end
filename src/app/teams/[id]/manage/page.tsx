@@ -42,10 +42,10 @@ import {
   updateTeam,
   deleteTeam,
   kickMember,
-  getStoredUser,
   ApiError
 } from '@/lib/api'
-import type { User, Team, TeamMember, ContactMethod } from '@/types'
+import { useAuth } from '@/hooks'
+import type { Team, TeamMember, ContactMethod } from '@/types'
 
 // 游戏列表
 const GAMES = [
@@ -82,8 +82,8 @@ export default function ManageTeamPage() {
   const router = useRouter()
   const params = useParams()
   const teamId = Number(params.id)
+  const { user, loading: authLoading } = useAuth({ redirectTo: '/login' })
 
-  const [user, setUser] = useState<User | null>(null)
   const [team, setTeam] = useState<Team | null>(null)
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -119,29 +119,16 @@ export default function ManageTeamPage() {
   }>({ open: false })
   const [kicking, setKicking] = useState(false)
 
-  // 检查登录状态并获取队伍信息
-  useEffect(() => {
-    const userData = getStoredUser<User>()
-
-    if (!userData) {
-      router.push(`/login?redirect=/teams/${teamId}/manage`)
-      return
-    }
-
-    setUser(userData)
-    fetchTeamData()
-    fetchMembersList()
-  }, [router, teamId])
-
   // 获取队伍信息
   const fetchTeamData = async () => {
+    if (!user) return
+
     try {
       const data = await getTeam(teamId)
       setTeam(data)
 
       // 检查是否是队长
-      const userData = getStoredUser<User>()
-      if (userData && data.creator_id !== userData.id) {
+      if (data.creator_id !== user.id) {
         router.push('/teams')
         return
       }
@@ -172,6 +159,14 @@ export default function ManageTeamPage() {
       console.error('获取成员列表错误:', err)
     }
   }
+
+  // 用户登录后获取队伍数据
+  useEffect(() => {
+    if (user) {
+      fetchTeamData()
+      fetchMembersList()
+    }
+  }, [user, teamId])
 
   // 保存队伍信息
   const handleSave = async () => {
@@ -265,7 +260,7 @@ export default function ManageTeamPage() {
     })
   }
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">

@@ -1,8 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { GamepadIcon, Users, MessageSquare, User, LogOut } from 'lucide-react'
 import {
@@ -12,61 +11,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { User as UserType } from '@/types'
+import { useUser } from '@/hooks'
+import { logout } from '@/lib/api'
 
 export function Navbar() {
   const router = useRouter()
-  const pathname = usePathname() // 监听路由变化
-  const [user, setUser] = useState<UserType | null>(null)
+  const user = useUser()
 
-  // 刷新用户信息的函数
-  const refreshUser = () => {
-    const userStr = localStorage.getItem('user')
-    if (userStr) {
-      try {
-        setUser(JSON.parse(userStr))
-      } catch (error) {
-        console.error('解析用户信息失败:', error)
-        localStorage.removeItem('user')
-        setUser(null)
-      }
-    } else {
-      setUser(null)
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } catch (error) {
+      console.error('登出错误:', error)
+    } finally {
+      router.push('/')
     }
-  }
-
-  useEffect(() => {
-    // 初始加载时读取用户信息
-    refreshUser()
-
-    // 监听 storage 事件（当其他标签页修改 localStorage 时触发）
-    window.addEventListener('storage', refreshUser)
-
-    // 监听自定义事件（当前页面修改 localStorage 时触发）
-    window.addEventListener('user-login', refreshUser)
-    window.addEventListener('user-logout', refreshUser)
-
-    return () => {
-      window.removeEventListener('storage', refreshUser)
-      window.removeEventListener('user-login', refreshUser)
-      window.removeEventListener('user-logout', refreshUser)
-    }
-  }, [])
-
-  // 路由变化时也刷新用户信息
-  useEffect(() => {
-    refreshUser()
-  }, [pathname])
-
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    setUser(null)
-    
-    // 触发自定义事件
-    window.dispatchEvent(new Event('user-logout'))
-    
-    router.push('/')
   }
 
   return (
