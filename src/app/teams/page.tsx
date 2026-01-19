@@ -34,20 +34,8 @@ import {
 } from "@/components/ui/dialog"
 import type { User, Team, MembershipStatus, ContactMethod } from '@/types'
 import { getTeams, joinTeam, checkMembership, ApiError } from '@/lib/api'
+import { GAMES_WITH_ALL } from '@/lib/constants'
 import { useUser } from '@/hooks'
-
-// 游戏列表
-const GAMES = [
-  '全部',
-  '王者荣耀',
-  '和平精英',
-  '英雄联盟',
-  'VALORANT',
-  'CS2',
-  'DOTA2',
-  '永劫无间',
-  '其他'
-]
 
 interface ContactInfo {
   method: ContactMethod
@@ -235,7 +223,7 @@ export default function TeamsPage() {
             <SelectValue placeholder="选择游戏" />
           </SelectTrigger>
           <SelectContent>
-            {GAMES.map(game => (
+            {GAMES_WITH_ALL.map(game => (
               <SelectItem key={game} value={game}>
                 {game}
               </SelectItem>
