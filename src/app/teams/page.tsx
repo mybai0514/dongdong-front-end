@@ -345,21 +345,10 @@ function TeamCard({
   getStatusBadge: (status: string, count: number, max: number) => React.ReactNode
   getContactIcon: (method: string) => string
 }) {
-  const [memberStatus, setMemberStatus] = useState<MembershipStatus | null>(null)
-
-  useEffect(() => {
-    if (user) {
-      checkStatus()
-    }
-  }, [user, team.id])
-
-  const checkStatus = async () => {
-    try {
-      const data = await checkMembership(team.id)
-      setMemberStatus(data)
-    } catch (error) {
-      console.error('检查成员状态错误:', error)
-    }
+  const memberStatus = {
+    isMember: team.isMember || false,
+    isCreator: team.isCreator || false,
+    contact: team.isMember ? { method: team.contact_method, value: team.contact_value } : undefined
   }
 
   const isJoining = joiningTeamId === team.id

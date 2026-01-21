@@ -25,6 +25,8 @@ export interface Team {
   max_members: number
   created_at: string | null
   updated_at: string | null
+  isMember?: boolean
+  isCreator?: boolean
 }
 
 // 创建队伍表单数据

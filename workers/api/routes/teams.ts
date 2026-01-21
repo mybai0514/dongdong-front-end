@@ -13,6 +13,7 @@ teamsRouter.get('/', async (c) => {
   try {
     const game = c.req.query('game')
     const status = c.req.query('status') || 'open'
+    const token = extractToken(c.req.header('Authorization'))
 
     const db = drizzle(c.env.DB)
 
@@ -28,6 +29,26 @@ teamsRouter.get('/', async (c) => {
     }
 
     const allTeams = await query.orderBy(desc(teams.created_at)).all()
+
+    // 如果用户已登录，批量查询成员状态
+    if (token) {
+      const user = await validateToken(db, token)
+      if (user) {
+        const teamIds = allTeams.map(t => t.id)
+        const memberships = await db.select()
+          .from(teamMembers)
+          .where(eq(teamMembers.user_id, user.id))
+          .all()
+
+        const membershipMap = new Map(memberships.map(m => [m.team_id, true]))
+
+        return c.json(allTeams.map(team => ({
+          ...team,
+          isMember: team.creator_id === user.id || membershipMap.has(team.id),
+          isCreator: team.creator_id === user.id
+        })))
+      }
+    }
 
     return c.json(allTeams)
   } catch (error) {
