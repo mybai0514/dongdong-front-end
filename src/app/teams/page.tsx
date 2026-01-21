@@ -346,8 +346,8 @@ function TeamCard({
   const isJoining = joiningTeamId === team.id
 
   return (
-    <Card className="hover:shadow-lg transition-shadow flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
