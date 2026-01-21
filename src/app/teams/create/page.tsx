@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DateTimePicker } from '@/components/ui/datetime-picker'
 import { ArrowLeft, Loader2, Plus } from 'lucide-react'
 import { createTeam, ApiError } from '@/lib/api'
 import { GAMES, CONTACT_METHODS, getRanks } from '@/lib/constants'
@@ -32,8 +33,8 @@ export default function CreateTeamPage() {
     title: string
     description: string
     rank_requirement: string
-    start_time: string
-    end_time: string
+    start_time: Date | undefined
+    end_time: Date | undefined
     contact_method: ContactMethod
     contact_value: string
     max_members: number
@@ -42,8 +43,8 @@ export default function CreateTeamPage() {
     title: '',
     description: '',
     rank_requirement: '不限',
-    start_time: '',
-    end_time: '',
+    start_time: undefined,
+    end_time: undefined,
     contact_method: 'wechat',
     contact_value: '',
     max_members: 5
@@ -117,7 +118,15 @@ export default function CreateTeamPage() {
 
     try {
       await createTeam({
-        ...formData,
+        game: formData.game,
+        title: formData.title,
+        description: formData.description,
+        rank_requirement: formData.rank_requirement,
+        start_time: formData.start_time.toISOString(),
+        end_time: formData.end_time.toISOString(),
+        contact_method: formData.contact_method,
+        contact_value: formData.contact_value,
+        max_members: formData.max_members,
         creator_id: user.id
       })
       router.push('/teams')
@@ -224,24 +233,16 @@ export default function CreateTeamPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="start_time">开始时间 *</Label>
-                  <Input
-                    id="start_time"
-                    type="datetime-local"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                    required
-                    className="[&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                  <DateTimePicker
+                    date={formData.start_time}
+                    setDate={(date) => setFormData({ ...formData, start_time: date })}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="end_time">结束时间 *</Label>
-                  <Input
-                    id="end_time"
-                    type="datetime-local"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                    required
-                    className="[&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                  <DateTimePicker
+                    date={formData.end_time}
+                    setDate={(date) => setFormData({ ...formData, end_time: date })}
                   />
                 </div>
               </div>
