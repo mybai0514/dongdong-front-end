@@ -195,7 +195,14 @@ export default function ProfilePage() {
   }
 
   // 获取状态标签
-  const getStatusBadge = (status: string, memberCount: number, maxMembers: number) => {
+  const getStatusBadge = (status: string, memberCount: number, maxMembers: number, endTime: string) => {
+    // 检查是否过期
+    const now = new Date()
+    const end = new Date(endTime)
+    if (end < now) {
+      return <Badge variant="destructive">已失效</Badge>
+    }
+
     if (status === 'full' || memberCount >= maxMembers) {
       return <Badge variant="secondary">已满员</Badge>
     }
@@ -416,7 +423,7 @@ export default function ProfilePage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <Badge variant="outline">{team.game}</Badge>
-                          {getStatusBadge(team.status, team.member_count, team.max_members)}
+                          {getStatusBadge(team.status, team.member_count, team.max_members, team.end_time)}
                         </div>
                         <h4 className="font-medium truncate">{team.title}</h4>
                         <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
@@ -487,7 +494,7 @@ export default function ProfilePage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <Badge variant="outline">{team.game}</Badge>
-                          {getStatusBadge(team.status, team.member_count, team.max_members)}
+                          {getStatusBadge(team.status, team.member_count, team.max_members, team.end_time)}
                         </div>
                         <h4 className="font-medium truncate">{team.title}</h4>
                         <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
