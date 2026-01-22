@@ -58,6 +58,13 @@ export default function TeamsPage() {
     contact?: ContactInfo
   }>({ open: false })
 
+  // 加入队伍确认弹窗
+  const [joinConfirmDialog, setJoinConfirmDialog] = useState<{
+    open: boolean
+    teamId?: number
+    teamTitle?: string
+  }>({ open: false })
+
   // 队友列表弹窗状态
   const [membersDialog, setMembersDialog] = useState<{
     open: boolean
@@ -87,14 +94,27 @@ export default function TeamsPage() {
     }
   }
 
-  // 加入队伍
-  const handleJoinTeam = async (teamId: number) => {
+  // 显示加入确认对话框
+  const showJoinConfirm = (teamId: number, teamTitle: string) => {
     if (!user) {
       window.location.href = '/login?redirect=/teams'
       return
     }
 
+    setJoinConfirmDialog({
+      open: true,
+      teamId,
+      teamTitle
+    })
+  }
+
+  // 确认加入队伍
+  const confirmJoinTeam = async () => {
+    const teamId = joinConfirmDialog.teamId
+    if (!teamId) return
+
     setJoiningTeamId(teamId)
+    setJoinConfirmDialog({ open: false })
 
     try {
       const data = await joinTeam(teamId)
@@ -312,7 +332,7 @@ export default function TeamsPage() {
               team={team}
               user={user}
               joiningTeamId={joiningTeamId}
-              onJoin={handleJoinTeam}
+              onJoin={showJoinConfirm}
               onShowContact={showContact}
               onShowMembers={showMembers}
               getStatusBadge={getStatusBadge}
@@ -442,6 +462,39 @@ export default function TeamsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 加入队伍确认弹窗 */}
+      <Dialog open={joinConfirmDialog.open} onOpenChange={(open) => setJoinConfirmDialog({ open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认加入队伍</DialogTitle>
+            <DialogDescription>
+              你确定要加入「{joinConfirmDialog.teamTitle}」吗？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setJoinConfirmDialog({ open: false })}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={confirmJoinTeam}
+              disabled={joiningTeamId !== null}
+            >
+              {joiningTeamId !== null ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  加入中...
+                </>
+              ) : (
+                '确认加入'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -460,7 +513,7 @@ function TeamCard({
   team: Team
   user: User | null
   joiningTeamId: number | null
-  onJoin: (id: number) => void
+  onJoin: (id: number, title: string) => void
   onShowContact: (id: number) => void
   onShowMembers: (id: number, title: string) => void
   getStatusBadge: (status: string, count: number, max: number) => React.ReactNode
@@ -547,7 +600,7 @@ function TeamCard({
               variant="default"
               className="flex-1"
               disabled={team.status !== 'open' || isJoining || !user}
-              onClick={() => onJoin(team.id)}
+              onClick={() => onJoin(team.id, team.title)}
             >
               {isJoining ? (
                 <>
