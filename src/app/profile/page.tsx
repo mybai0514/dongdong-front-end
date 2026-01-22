@@ -506,15 +506,15 @@ export default function ProfilePage() {
                             {team.member_count}/{team.max_members}
                           </span>
                           <span className="flex items-center gap-1">
-                            <MessageCircle className="h-3 w-3" />
-                            {getContactIcon(team.contact_method)}: {team.contact_value}
-                          </span>
-                          <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             {new Date(team.start_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                             {' - '}
                             {new Date(team.end_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                           </span>
+                        </div>
+                        <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
+                          <MessageCircle className="h-3 w-3" />
+                          <span>{getContactIcon(team.contact_method)}: {team.contact_value}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
