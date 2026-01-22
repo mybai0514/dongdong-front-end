@@ -257,13 +257,13 @@ export default function CreateTeamPage() {
                   id="max_members"
                   type="number"
                   min={2}
-                  max={10}
+                  max={15}
                   value={formData.max_members}
                   onChange={(e) => setFormData({ ...formData, max_members: Number(e.target.value) })}
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  最少 2 人，最多 10 人
+                  最少 2 人，最多 15 人
                 </p>
               </div>
 

@@ -141,6 +141,11 @@ export default function TeamsPage() {
 
   // 筛选组队
   const filteredTeams = teams.filter(team => {
+    // 过滤已过期的队伍
+    const now = new Date()
+    const endTime = new Date(team.end_time)
+    if (endTime < now) return false
+
     const matchSearch = team.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                        team.description?.toLowerCase().includes(searchQuery.toLowerCase())
 
@@ -397,7 +402,7 @@ function TeamCard({
             <span className="truncate">
               {new Date(team.start_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
               {' - '}
-              {new Date(team.end_time).toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+              {new Date(team.end_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
 

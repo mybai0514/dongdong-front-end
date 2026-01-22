@@ -154,16 +154,6 @@ export default function ProfilePage() {
     await logout()
   }
 
-  // 格式化时间
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
-
   // 获取状态标签
   const getStatusBadge = (status: string, memberCount: number, maxMembers: number) => {
     if (status === 'full' || memberCount >= maxMembers) {
@@ -396,7 +386,9 @@ export default function ProfilePage() {
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {team.created_at ? formatTime(team.created_at) : '未知时间'}
+                            {new Date(team.start_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            {' - '}
+                            {new Date(team.end_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                       </div>
@@ -452,12 +444,18 @@ export default function ProfilePage() {
                         <h4 className="font-medium truncate">{team.title}</h4>
                         <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {team.member_count}/{team.max_members}
+                          </span>
+                          <span className="flex items-center gap-1">
                             <MessageCircle className="h-3 w-3" />
                             {getContactIcon(team.contact_method)}: {team.contact_value}
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {team.created_at ? formatTime(team.created_at) : '未知时间'}
+                            {new Date(team.start_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            {' - '}
+                            {new Date(team.end_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                       </div>
