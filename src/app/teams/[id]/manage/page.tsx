@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DateTimePicker } from '@/components/ui/datetime-picker'
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,7 @@ export default function ManageTeamPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
 
   const [formData, setFormData] = useState<{
     title: string
@@ -68,6 +70,8 @@ export default function ManageTeamPage() {
     contact_value: string
     max_members: number
     status: 'open' | 'closed' | 'full'
+    start_time: Date | undefined
+    end_time: Date | undefined
   }>({
     title: '',
     description: '',
@@ -75,7 +79,9 @@ export default function ManageTeamPage() {
     contact_method: 'wechat',
     contact_value: '',
     max_members: 5,
-    status: 'open'
+    status: 'open',
+    start_time: undefined,
+    end_time: undefined
   })
 
   // 解散队伍弹窗
@@ -110,7 +116,9 @@ export default function ManageTeamPage() {
         contact_method: data.contact_method,
         contact_value: data.contact_value,
         max_members: data.max_members,
-        status: data.status
+        status: data.status,
+        start_time: new Date(data.start_time),
+        end_time: new Date(data.end_time)
       })
     } catch (err) {
       console.error('获取队伍信息错误:', err)
@@ -150,16 +158,37 @@ export default function ManageTeamPage() {
       return
     }
 
+    if (!formData.start_time || !formData.end_time) {
+      setError('开始时间和结束时间不能为空')
+      return
+    }
+
+    // 验证时间
+    if (formData.end_time <= formData.start_time) {
+      setError('结束时间必须晚于开始时间')
+      return
+    }
+
     setSaving(true)
     setError('')
+    setSuccessMessage('')
 
     try {
-      await updateTeam(teamId, formData)
+      // 转换时间为 ISO 格式
+      const dataToSend = {
+        ...formData,
+        start_time: formData.start_time.toISOString(),
+        end_time: formData.end_time.toISOString()
+      }
+
+      await updateTeam(teamId, dataToSend)
       // 更新本地状态
       if (team) {
-        setTeam({ ...team, ...formData })
+        setTeam({ ...team, ...dataToSend })
       }
-      alert('保存成功')
+      setSuccessMessage('保存成功！')
+      // 3秒后清除成功消息
+      setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message || '保存失败')
@@ -373,6 +402,30 @@ export default function ManageTeamPage() {
                   </Select>
                 </div>
 
+                {/* 开始时间 */}
+                <div className="space-y-2">
+                  <Label htmlFor="start_time">开始时间 *</Label>
+                  <DateTimePicker
+                    date={formData.start_time}
+                    setDate={(date) => setFormData({ ...formData, start_time: date })}
+                    minDate={new Date()}
+                  />
+                </div>
+
+                {/* 结束时间 */}
+                <div className="space-y-2">
+                  <Label htmlFor="end_time">结束时间 *</Label>
+                  <DateTimePicker
+                    date={formData.end_time}
+                    setDate={(date) => setFormData({ ...formData, end_time: date })}
+                    minDate={formData.start_time}
+                    disabled={!formData.start_time}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    结束时间必须晚于开始时间
+                  </p>
+                </div>
+
                 {/* 详细描述 */}
                 <div className="space-y-2">
                   <Label htmlFor="description">详细描述（可选）</Label>
@@ -414,17 +467,24 @@ export default function ManageTeamPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="contact_value">
-                      {CONTACT_METHODS.find(m => m.value === formData.contact_method)?.label} 号 *
+                      {CONTACT_METHODS.find(m => m.value === formData.contact_method)?.label} *
                     </Label>
                     <Input
                       id="contact_value"
-                      placeholder={`请输入你的${CONTACT_METHODS.find(m => m.value === formData.contact_method)?.label}号`}
+                      placeholder={`请输入你的${CONTACT_METHODS.find(m => m.value === formData.contact_method)?.label}`}
                       value={formData.contact_value}
                       onChange={(e) => setFormData({ ...formData, contact_value: e.target.value })}
                       required
                     />
                   </div>
                 </div>
+
+                {/* 成功提示 */}
+                {successMessage && (
+                  <div className="text-sm text-green-600 bg-green-50 p-3 rounded border border-green-200">
+                    {successMessage}
+                  </div>
+                )}
 
                 {/* 错误提示 */}
                 {error && (

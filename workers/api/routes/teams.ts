@@ -143,12 +143,43 @@ teamsRouter.post('/', async (c) => {
 teamsRouter.put('/:id', async (c) => {
   try {
     const id = c.req.param('id')
-    const updates = await c.req.json()
+    const body = await c.req.json()
+
+    console.log('收到更新请求，body:', JSON.stringify(body))
 
     const db = drizzle(c.env.DB)
 
-    // 添加更新时间
-    updates.updated_at = new Date()
+    // 只提取允许更新的字段
+    const updates: any = {
+      updated_at: new Date()
+    }
+
+    // 允许更新的字段列表
+    const allowedFields = [
+      'title',
+      'description',
+      'rank_requirement',
+      'contact_method',
+      'contact_value',
+      'max_members',
+      'status',
+      'start_time',
+      'end_time'
+    ]
+
+    // 只更新允许的字段
+    allowedFields.forEach(field => {
+      if (body[field] !== undefined) {
+        // 时间字段需要转换为 Date 对象
+        if (field === 'start_time' || field === 'end_time') {
+          updates[field] = new Date(body[field])
+        } else {
+          updates[field] = body[field]
+        }
+      }
+    })
+
+    console.log('准备更新的数据:', JSON.stringify(updates))
 
     await db.update(teams)
       .set(updates)
@@ -158,7 +189,7 @@ teamsRouter.put('/:id', async (c) => {
     return c.json({ success: true, message: '更新成功' })
   } catch (error) {
     console.error('更新组队信息错误:', error)
-    return c.json({ error: '更新组队信息失败' }, 500)
+    return c.json({ error: '更新组队信息失败', details: String(error) }, 500)
   }
 })
 
