@@ -58,3 +58,6 @@ db/migrations/meta/
 
 # For future OpenNext deployment (uncomment when you add @opennextjs/cloudflare)
 # .open-next/
+
+# 本地配置文件
+*.local.json
