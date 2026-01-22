@@ -375,13 +375,13 @@ export default function ManageTeamPage() {
                     id="max_members"
                     type="number"
                     min={team.member_count}
-                    max={10}
+                    max={15}
                     value={formData.max_members}
                     onChange={(e) => setFormData({ ...formData, max_members: Number(e.target.value) })}
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    当前 {team.member_count} 人，最少不能低于当前人数
+                    最少 2 人, 最多 15 人
                   </p>
                 </div>
 
@@ -402,29 +402,29 @@ export default function ManageTeamPage() {
                   </Select>
                 </div>
 
-                {/* 开始时间 */}
-                <div className="space-y-2">
-                  <Label htmlFor="start_time">开始时间 *</Label>
-                  <DateTimePicker
-                    date={formData.start_time}
-                    setDate={(date) => setFormData({ ...formData, start_time: date })}
-                    minDate={new Date()}
-                  />
+                {/* 游戏时间 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start_time">开始时间 *</Label>
+                    <DateTimePicker
+                      date={formData.start_time}
+                      setDate={(date) => setFormData({ ...formData, start_time: date })}
+                      minDate={new Date()}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end_time">结束时间 *</Label>
+                    <DateTimePicker
+                      date={formData.end_time}
+                      setDate={(date) => setFormData({ ...formData, end_time: date })}
+                      minDate={formData.start_time}
+                      disabled={!formData.start_time}
+                    />
+                  </div>
                 </div>
-
-                {/* 结束时间 */}
-                <div className="space-y-2">
-                  <Label htmlFor="end_time">结束时间 *</Label>
-                  <DateTimePicker
-                    date={formData.end_time}
-                    setDate={(date) => setFormData({ ...formData, end_time: date })}
-                    minDate={formData.start_time}
-                    disabled={!formData.start_time}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    结束时间必须晚于开始时间
-                  </p>
-                </div>
+                <p className="text-xs text-muted-foreground -mt-2">
+                  结束时间必须晚于开始时间
+                </p>
 
                 {/* 详细描述 */}
                 <div className="space-y-2">
@@ -475,7 +475,11 @@ export default function ManageTeamPage() {
                       value={formData.contact_value}
                       onChange={(e) => setFormData({ ...formData, contact_value: e.target.value })}
                       required
+                      maxLength={50}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {formData.contact_value.length}/50
+                    </p>
                   </div>
                 </div>
 

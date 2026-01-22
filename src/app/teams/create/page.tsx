@@ -104,8 +104,8 @@ export default function CreateTeamPage() {
       return
     }
 
-    if (formData.max_members < 2 || formData.max_members > 10) {
-      setError('队伍人数必须在 2-10 人之间')
+    if (formData.max_members < 2 || formData.max_members > 15) {
+      setError('队伍人数必须在 2-15 人之间')
       return
     }
 
@@ -316,7 +316,11 @@ export default function CreateTeamPage() {
                     value={formData.contact_value}
                     onChange={(e) => setFormData({ ...formData, contact_value: e.target.value })}
                     required
+                    maxLength={50}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    {formData.contact_value.length}/50
+                  </p>
                 </div>
               </div>
 
