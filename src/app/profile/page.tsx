@@ -72,11 +72,12 @@ export default function ProfilePage() {
   }>({ open: false })
   const [leaving, setLeaving] = useState(false)
 
-  // 队友列表弹窗状态
+  // 队伍详情弹窗状态
   const [membersDialog, setMembersDialog] = useState<{
     open: boolean
     teamId?: number
     teamTitle?: string
+    teamDescription?: string
     members?: TeamMember[]
     loading?: boolean
   }>({ open: false })
@@ -159,13 +160,14 @@ export default function ProfilePage() {
     }
   }
 
-  // 查看队友列表
-  const showMembers = async (teamId: number, teamTitle: string) => {
+  // 查看队伍详情
+  const showMembers = async (teamId: number, teamTitle: string, teamDescription?: string) => {
     // 打开弹窗并开始加载
     setMembersDialog({
       open: true,
       teamId,
       teamTitle,
+      teamDescription,
       loading: true
     })
 
@@ -175,16 +177,17 @@ export default function ProfilePage() {
         open: true,
         teamId,
         teamTitle,
+        teamDescription,
         members,
         loading: false
       })
     } catch (err) {
       if (err instanceof ApiError) {
-        alert(err.message || '获取队友信息失败')
+        alert(err.message || '获取队伍信息失败')
       } else {
         alert('网络错误，请稍后重试')
       }
-      console.error('获取队友信息错误:', err)
+      console.error('获取队伍信息错误:', err)
       setMembersDialog({ open: false })
     }
   }
@@ -443,10 +446,10 @@ export default function ProfilePage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => showMembers(team.id, team.title)}
+                          onClick={() => showMembers(team.id, team.title, team.description || undefined)}
                         >
                           <Users className="mr-1 h-3 w-3" />
-                          查看队友
+                          查看队伍
                         </Button>
                         <Button variant="outline" size="sm" asChild>
                           <Link href={`/teams/${team.id}/manage`}>管理</Link>
@@ -518,10 +521,10 @@ export default function ProfilePage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => showMembers(team.id, team.title)}
+                          onClick={() => showMembers(team.id, team.title, team.description || undefined)}
                         >
                           <Users className="mr-1 h-3 w-3" />
-                          查看队友
+                          查看队伍
                         </Button>
                         <Button
                           variant="outline"
@@ -578,13 +581,13 @@ export default function ProfilePage() {
         </DialogContent>
       </Dialog>
 
-      {/* 队友列表弹窗 */}
+      {/* 队伍详情弹窗 */}
       <Dialog open={membersDialog.open} onOpenChange={(open) => setMembersDialog({ open })}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              队友列表
+              队伍详情
             </DialogTitle>
             <DialogDescription>
               {membersDialog.teamTitle}
@@ -596,49 +599,65 @@ export default function ProfilePage() {
                 <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                 <p className="mt-2 text-sm text-muted-foreground">加载中...</p>
               </div>
-            ) : membersDialog.members && membersDialog.members.length > 0 ? (
-              <div className="space-y-2">
-                {membersDialog.members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="font-semibold text-primary">
-                          {member.username.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{member.username}</p>
-                          {member.isCreator && (
-                            <Badge variant="secondary" className="text-xs">
-                              <Crown className="h-3 w-3 mr-1" />
-                              队长
-                            </Badge>
-                          )}
-                        </div>
-                        {member.joined_at && (
-                          <p className="text-xs text-muted-foreground">
-                            加入于 {new Date(member.joined_at).toLocaleString('zh-CN', {
-                              month: '2-digit',
-                              day: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             ) : (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">暂无队友信息</p>
-              </div>
+              <>
+                {/* 队伍描述 */}
+                {membersDialog.teamDescription && (
+                  <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                    <h4 className="text-sm font-semibold mb-1">队伍描述</h4>
+                    <p className="text-sm text-muted-foreground">{membersDialog.teamDescription}</p>
+                  </div>
+                )}
+
+                {/* 队友列表 */}
+                <div className="mb-2">
+                  <h4 className="text-sm font-semibold mb-2">队友列表</h4>
+                  {membersDialog.members && membersDialog.members.length > 0 ? (
+                    <div className="space-y-2">
+                      {membersDialog.members.map((member) => (
+                        <div
+                          key={member.id}
+                          className="flex items-center justify-between p-3 border rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="font-semibold text-primary">
+                                {member.username.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{member.username}</p>
+                                {member.isCreator && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    <Crown className="h-3 w-3 mr-1" />
+                                    队长
+                                  </Badge>
+                                )}
+                              </div>
+                              {member.joined_at && (
+                                <p className="text-xs text-muted-foreground">
+                                  加入于 {new Date(member.joined_at).toLocaleString('zh-CN', {
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Users className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-muted-foreground">暂无队友信息</p>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
           <DialogFooter>
