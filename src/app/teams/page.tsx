@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { DatePicker } from '@/components/ui/date-picker'
 import {
   Users,
   Clock,
@@ -49,7 +50,7 @@ export default function TeamsPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedGame, setSelectedGame] = useState('全部')
-  const [selectedDate, setSelectedDate] = useState('')
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
 
   // 加入队伍相关状态
   const [joiningTeamId, setJoiningTeamId] = useState<number | null>(null)
@@ -298,12 +299,13 @@ export default function TeamsPage() {
           </SelectContent>
         </Select>
 
-        <Input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="w-full md:w-50"
-        />
+        <div className="w-full md:w-50">
+          <DatePicker
+            date={selectedDate}
+            setDate={setSelectedDate}
+            placeholder="筛选日期"
+          />
+        </div>
       </div>
 
       {/* 组队列表 */}

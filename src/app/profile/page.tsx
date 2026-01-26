@@ -203,7 +203,7 @@ export default function ProfilePage() {
     const now = new Date()
     const end = new Date(endTime)
     if (end < now) {
-      return <Badge variant="destructive">已失效</Badge>
+      return <Badge variant="secondary">已完成</Badge>
     }
 
     if (status === 'full' || memberCount >= maxMembers) {
@@ -215,6 +215,13 @@ export default function ProfilePage() {
     return <Badge className="bg-green-500">招募中</Badge>
   }
 
+  // 检查队伍是否已完成
+  const isTeamCompleted = (endTime: string) => {
+    const now = new Date()
+    const end = new Date(endTime)
+    return end < now
+  }
+
   // 获取联系方式图标
   const getContactIcon = (method: string) => {
     switch (method) {
@@ -224,6 +231,10 @@ export default function ProfilePage() {
       default: return '联系方式'
     }
   }
+
+  // 筛选进行中的队伍（未完成的）
+  const activeMyTeams = myTeams.filter(team => !isTeamCompleted(team.end_time))
+  const activeJoinedTeams = joinedTeams.filter(team => !isTeamCompleted(team.end_time))
 
   if (loading) {
     return (
@@ -241,17 +252,11 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
       {/* 页面标题 */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">个人中心</h1>
-          <p className="text-muted-foreground">
-            管理你的个人信息和队伍
-          </p>
-        </div>
-        <Button variant="outline" onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          退出登录
-        </Button>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">个人中心</h1>
+        <p className="text-muted-foreground">
+          管理你的个人信息和队伍
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -397,10 +402,10 @@ export default function ProfilePage() {
               <CardTitle className="flex items-center gap-2">
                 <Crown className="h-5 w-5 text-yellow-500" />
                 我发起的队伍
-                <Badge variant="secondary" className="ml-2">{myTeams.length}</Badge>
+                <Badge variant="secondary" className="ml-2">{activeMyTeams.length}</Badge>
               </CardTitle>
               <CardDescription>
-                你创建的所有组队信息
+                你创建的进行中的组队信息
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -408,17 +413,17 @@ export default function ProfilePage() {
                 <div className="text-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                 </div>
-              ) : myTeams.length === 0 ? (
+              ) : activeMyTeams.length === 0 ? (
                 <div className="text-center py-8">
                   <Gamepad2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">你还没有发起过组队</p>
+                  <p className="text-muted-foreground mb-4">暂无进行中的组队</p>
                   <Button asChild>
                     <Link href="/teams/create">发布组队</Link>
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {myTeams.map(team => (
+                  {activeMyTeams.map(team => (
                     <div
                       key={team.id}
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -451,9 +456,11 @@ export default function ProfilePage() {
                           <Users className="mr-1 h-3 w-3" />
                           查看队伍
                         </Button>
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href={`/teams/${team.id}/manage`}>管理</Link>
-                        </Button>
+                        {!isTeamCompleted(team.end_time) && (
+                          <Button variant="outline" size="sm" asChild>
+                            <Link href={`/teams/${team.id}/manage`}>管理</Link>
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -468,10 +475,10 @@ export default function ProfilePage() {
               <CardTitle className="flex items-center gap-2">
                 <UserPlus className="h-5 w-5 text-blue-500" />
                 我加入的队伍
-                <Badge variant="secondary" className="ml-2">{joinedTeams.length}</Badge>
+                <Badge variant="secondary" className="ml-2">{activeJoinedTeams.length}</Badge>
               </CardTitle>
               <CardDescription>
-                你作为队员加入的队伍
+                你作为队员加入的进行中的队伍
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -479,17 +486,17 @@ export default function ProfilePage() {
                 <div className="text-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                 </div>
-              ) : joinedTeams.length === 0 ? (
+              ) : activeJoinedTeams.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">你还没有加入任何队伍</p>
+                  <p className="text-muted-foreground mb-4">暂无进行中的队伍</p>
                   <Button asChild>
                     <Link href="/teams">浏览队伍</Link>
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {joinedTeams.map(team => (
+                  {activeJoinedTeams.map(team => (
                     <div
                       key={team.id}
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"

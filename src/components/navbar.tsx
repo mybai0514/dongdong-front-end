@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { GamepadIcon, Users, MessageSquare, User, LogOut } from 'lucide-react'
+import { GamepadIcon, Users, MessageSquare, User, LogOut, Clock } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,6 +73,12 @@ export function Navbar() {
                   <Link href="/profile" className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     个人中心
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile/history" className="cursor-pointer">
+                    <Clock className="mr-2 h-4 w-4" />
+                    历史组队
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
