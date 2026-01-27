@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -58,7 +59,10 @@ export default function ProfilePage() {
   const [editForm, setEditForm] = useState({
     wechat: '',
     qq: '',
-    yy: ''
+    yy: '',
+    wechat_visible: true,
+    qq_visible: true,
+    yy_visible: true
   })
 
   // 我发起的队伍
@@ -108,7 +112,10 @@ export default function ProfilePage() {
       setEditForm({
         wechat: user.wechat || '',
         qq: user.qq || '',
-        yy: user.yy || ''
+        yy: user.yy || '',
+        wechat_visible: user.wechat_visible !== undefined ? user.wechat_visible : true,
+        qq_visible: user.qq_visible !== undefined ? user.qq_visible : true,
+        yy_visible: user.yy_visible !== undefined ? user.yy_visible : true
       })
       fetchMyTeams(user.id)
       fetchJoinedTeamsList()
@@ -386,7 +393,10 @@ export default function ProfilePage() {
                         setEditForm({
                           wechat: user.wechat || '',
                           qq: user.qq || '',
-                          yy: user.yy || ''
+                          yy: user.yy || '',
+                          wechat_visible: user.wechat_visible !== undefined ? user.wechat_visible : true,
+                          qq_visible: user.qq_visible !== undefined ? user.qq_visible : true,
+                          yy_visible: user.yy_visible !== undefined ? user.yy_visible : true
                         })
                       }}
                     >
@@ -415,7 +425,19 @@ export default function ProfilePage() {
               {editing ? (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="wechat">微信</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="wechat">微信</Label>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="wechat-visible" className="text-xs text-muted-foreground cursor-pointer">
+                          陌生人可见
+                        </Label>
+                        <Switch
+                          id="wechat-visible"
+                          checked={editForm.wechat_visible}
+                          onCheckedChange={(checked: boolean) => setEditForm({ ...editForm, wechat_visible: checked })}
+                        />
+                      </div>
+                    </div>
                     <Input
                       id="wechat"
                       placeholder="请输入微信号"
@@ -424,7 +446,19 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="qq">QQ</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="qq">QQ</Label>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="qq-visible" className="text-xs text-muted-foreground cursor-pointer">
+                          陌生人可见
+                        </Label>
+                        <Switch
+                          id="qq-visible"
+                          checked={editForm.qq_visible}
+                          onCheckedChange={(checked: boolean) => setEditForm({ ...editForm, qq_visible: checked })}
+                        />
+                      </div>
+                    </div>
                     <Input
                       id="qq"
                       placeholder="请输入QQ号"
@@ -433,7 +467,19 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="yy">YY</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="yy">YY</Label>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="yy-visible" className="text-xs text-muted-foreground cursor-pointer">
+                          陌生人可见
+                        </Label>
+                        <Switch
+                          id="yy-visible"
+                          checked={editForm.yy_visible}
+                          onCheckedChange={(checked: boolean) => setEditForm({ ...editForm, yy_visible: checked })}
+                        />
+                      </div>
+                    </div>
                     <Input
                       id="yy"
                       placeholder="请输入YY号"
@@ -446,23 +492,44 @@ export default function ProfilePage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between py-2">
                     <span className="text-muted-foreground">微信</span>
-                    <span className={user.wechat ? '' : 'text-muted-foreground'}>
-                      {user.wechat || '未设置'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={user.wechat ? '' : 'text-muted-foreground'}>
+                        {user.wechat || '未设置'}
+                      </span>
+                      {user.wechat && (
+                        <Badge variant={user.wechat_visible ? 'default' : 'secondary'} className="text-xs">
+                          {user.wechat_visible ? '公开' : '私密'}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between py-2">
                     <span className="text-muted-foreground">QQ</span>
-                    <span className={user.qq ? '' : 'text-muted-foreground'}>
-                      {user.qq || '未设置'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={user.qq ? '' : 'text-muted-foreground'}>
+                        {user.qq || '未设置'}
+                      </span>
+                      {user.qq && (
+                        <Badge variant={user.qq_visible ? 'default' : 'secondary'} className="text-xs">
+                          {user.qq_visible ? '公开' : '私密'}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between py-2">
                     <span className="text-muted-foreground">YY</span>
-                    <span className={user.yy ? '' : 'text-muted-foreground'}>
-                      {user.yy || '未设置'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={user.yy ? '' : 'text-muted-foreground'}>
+                        {user.yy || '未设置'}
+                      </span>
+                      {user.yy && (
+                        <Badge variant={user.yy_visible ? 'default' : 'secondary'} className="text-xs">
+                          {user.yy_visible ? '公开' : '私密'}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

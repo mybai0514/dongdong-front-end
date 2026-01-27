@@ -22,6 +22,9 @@ usersRouter.get('/:id', async (c) => {
       wechat: users.wechat,
       qq: users.qq,
       yy: users.yy,
+      wechat_visible: users.wechat_visible,
+      qq_visible: users.qq_visible,
+      yy_visible: users.yy_visible,
       created_at: users.created_at
     }).from(users).where(eq(users.id, Number(id))).get()
 
@@ -97,14 +100,17 @@ usersRouter.put('/:id', authMiddleware, async (c) => {
       return c.json({ error: '无权限修改他人信息' }, 403)
     }
 
-    const { wechat, qq, yy } = await c.req.json()
+    const { wechat, qq, yy, wechat_visible, qq_visible, yy_visible } = await c.req.json()
     const db = drizzle(c.env.DB)
 
     await db.update(users)
       .set({
         wechat: wechat || null,
         qq: qq || null,
-        yy: yy || null
+        yy: yy || null,
+        wechat_visible: wechat_visible !== undefined ? wechat_visible : true,
+        qq_visible: qq_visible !== undefined ? qq_visible : true,
+        yy_visible: yy_visible !== undefined ? yy_visible : true
       })
       .where(eq(users.id, Number(userId)))
       .run()

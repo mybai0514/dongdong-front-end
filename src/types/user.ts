@@ -11,6 +11,9 @@ export interface User {
   wechat: string | null
   qq: string | null
   yy: string | null
+  wechat_visible?: boolean
+  qq_visible?: boolean
+  yy_visible?: boolean
   created_at?: string | null
 }
 
@@ -35,4 +38,7 @@ export interface UserProfileUpdate {
   wechat?: string | null
   qq?: string | null
   yy?: string | null
+  wechat_visible?: boolean
+  qq_visible?: boolean
+  yy_visible?: boolean
 }

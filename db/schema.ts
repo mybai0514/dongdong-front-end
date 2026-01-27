@@ -10,6 +10,9 @@ export const users = sqliteTable('users', {
   wechat: text('wechat'), // 微信号
   qq: text('qq'), // QQ 号
   yy: text('yy'), // YY 号
+  wechat_visible: integer('wechat_visible', { mode: 'boolean' }).notNull().default(true), // 微信号是否对陌生人可见
+  qq_visible: integer('qq_visible', { mode: 'boolean' }).notNull().default(true), // QQ 号是否对陌生人可见
+  yy_visible: integer('yy_visible', { mode: 'boolean' }).notNull().default(true), // YY 号是否对陌生人可见
   created_at: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()) // 创建时间
 })
 
