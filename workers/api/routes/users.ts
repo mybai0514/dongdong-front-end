@@ -58,16 +58,16 @@ usersRouter.get('/:id/teams', async (c) => {
   }
 })
 
-// 获取当前用户加入的队伍
-usersRouter.get('/me/joined-teams', authMiddleware, async (c) => {
+// 获取指定用户加入的队伍
+usersRouter.get('/:id/joined-teams', async (c) => {
   try {
+    const userId = c.req.param('id')
     const db = drizzle(c.env.DB)
-    const user = c.get('user')
 
-    // 获取用户加入的队伍（不包括自己创建的）
+    // 获取用户加入的队伍
     const memberRecords = await db.select()
       .from(teamMembers)
-      .where(eq(teamMembers.user_id, user.id))
+      .where(eq(teamMembers.user_id, Number(userId)))
       .all()
 
     if (memberRecords.length === 0) {
@@ -84,7 +84,7 @@ usersRouter.get('/me/joined-teams', authMiddleware, async (c) => {
 
     return c.json(joinedTeams)
   } catch (error) {
-    console.error('获取加入的队伍错误:', error)
+    console.error('获取用户加入的队伍错误:', error)
     return c.json({ error: '获取队伍失败' }, 500)
   }
 })

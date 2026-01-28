@@ -41,7 +41,7 @@ export {
 export {
   getUser,
   getUserTeams,
-  getJoinedTeams,
+  getUserJoinedTeams,
   updateUser,
   getUserReputation,
 } from './users'

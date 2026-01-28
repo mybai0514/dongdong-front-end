@@ -34,10 +34,10 @@ export async function getUserTeams(userId: number): Promise<Team[]> {
 }
 
 /**
- * 获取当前用户加入的队伍
+ * 获取指定用户加入的队伍
  */
-export async function getJoinedTeams(): Promise<Team[]> {
-  return get<Team[]>('/api/users/me/joined-teams')
+export async function getUserJoinedTeams(userId: number): Promise<Team[]> {
+  return get<Team[]>(`/api/users/${userId}/joined-teams`)
 }
 
 /**

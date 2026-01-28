@@ -36,7 +36,7 @@ import {
 } from 'lucide-react'
 import {
   getUserTeams,
-  getJoinedTeams,
+  getUserJoinedTeams,
   updateUser,
   leaveTeam,
   getTeamMembers,
@@ -118,7 +118,7 @@ export default function ProfilePage() {
         yy_visible: user.yy_visible !== undefined ? user.yy_visible : true
       })
       fetchMyTeams(user.id)
-      fetchJoinedTeamsList()
+      fetchJoinedTeamsList(user.id)
       fetchReputation(user.id)
     }
   }, [user])
@@ -137,10 +137,10 @@ export default function ProfilePage() {
   }
 
   // 获取我加入的队伍
-  const fetchJoinedTeamsList = async () => {
+  const fetchJoinedTeamsList = async (userId: number) => {
     setLoadingJoinedTeams(true)
     try {
-      const data = await getJoinedTeams()
+      const data = await getUserJoinedTeams(userId)
       setJoinedTeams(data)
     } catch (error) {
       console.error('获取加入的队伍失败:', error)
@@ -187,7 +187,9 @@ export default function ProfilePage() {
     try {
       await leaveTeam(leaveDialog.teamId)
       // 刷新加入的队伍列表
-      fetchJoinedTeamsList()
+      if (user) {
+        fetchJoinedTeamsList(user.id)
+      }
       setLeaveDialog({ open: false })
     } catch (err) {
       if (err instanceof ApiError) {
@@ -839,11 +841,13 @@ export default function ProfilePage() {
                             className="flex items-center justify-between p-3 border rounded-lg"
                           >
                             <div className="flex items-center gap-3 flex-1">
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="font-semibold text-primary">
-                                  {member.username.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
+                              <Link href={`/profile/${member.user_id}`}>
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-colors">
+                                  <span className="font-semibold text-primary">
+                                    {member.username.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              </Link>
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
                                   <p className="font-medium">{member.username}</p>

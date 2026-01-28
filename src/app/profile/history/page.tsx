@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dialog"
 import {
   getUserTeams,
-  getJoinedTeams,
+  getUserJoinedTeams,
   getTeamMembers,
   submitTeamRatings,
   getTeamRatingStatus,
@@ -103,7 +103,7 @@ export default function HistoryPage() {
   useEffect(() => {
     if (user) {
       fetchMyTeams(user.id)
-      fetchJoinedTeamsList()
+      fetchJoinedTeamsList(user.id)
     }
   }, [user])
 
@@ -121,10 +121,10 @@ export default function HistoryPage() {
     }
   }
 
-  const fetchJoinedTeamsList = async () => {
+  const fetchJoinedTeamsList = async (userId: number) => {
     setLoadingJoinedTeams(true)
     try {
-      const data = await getJoinedTeams()
+      const data = await getUserJoinedTeams(userId)
       setJoinedTeams(data)
       // 检查已完成队伍的评分状态
       await checkRatingStatus(data)
@@ -502,11 +502,13 @@ export default function HistoryPage() {
                             className="flex items-center justify-between p-3 border rounded-lg"
                           >
                             <div className="flex items-center gap-3 flex-1">
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="font-semibold text-primary">
-                                  {member.username.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
+                              <Link href={`/profile/${member.user_id}`}>
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-colors">
+                                  <span className="font-semibold text-primary">
+                                    {member.username.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              </Link>
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
                                   <p className="font-medium">{member.username}</p>
@@ -595,11 +597,13 @@ export default function HistoryPage() {
                 {ratingDialog.members.map((member) => (
                   <div key={member.user_id} className="p-4 border rounded-lg space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="font-semibold text-primary">
-                          {member.username.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
+                      <Link href={`/profile/${member.user_id}`}>
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-colors">
+                          <span className="font-semibold text-primary">
+                            {member.username.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      </Link>
                       <p className="font-medium">{member.username}</p>
                     </div>
 
@@ -758,11 +762,13 @@ export default function HistoryPage() {
                 {viewRatingDialog.ratings.map((rating) => (
                   <div key={rating.id} className="p-4 border rounded-lg space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="font-semibold text-primary">
-                          {rating.username.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
+                      <Link href={`/profile/${rating.reviewee_id}`}>
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-colors">
+                          <span className="font-semibold text-primary">
+                            {rating.username.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      </Link>
                       <p className="font-medium">{rating.username}</p>
                     </div>
 

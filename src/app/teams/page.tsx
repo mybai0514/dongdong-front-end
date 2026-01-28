@@ -455,11 +455,13 @@ export default function TeamsPage() {
                             className="flex items-center justify-between p-3 border rounded-lg"
                           >
                             <div className="flex items-center gap-3 flex-1">
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="font-semibold text-primary">
-                                  {member.username.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
+                              <Link href={`/profile/${member.user_id}`}>
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-colors">
+                                  <span className="font-semibold text-primary">
+                                    {member.username.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              </Link>
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
                                   <p className="font-medium">{member.username}</p>
