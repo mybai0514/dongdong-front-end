@@ -64,6 +64,8 @@ export default function TeamsPage() {
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
   const itemsPerPage = 9 // 每页显示9个队伍（3x3网格）
 
   // 加入队伍相关状态
@@ -94,16 +96,36 @@ export default function TeamsPage() {
   // 获取组队列表
   useEffect(() => {
     fetchTeamsList()
-  }, [selectedGame])
+  }, [selectedGame, currentPage, searchQuery, selectedDate])
+
+  // 当筛选条件改变时，重置到第一页
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedGame, selectedDate])
 
   const fetchTeamsList = async () => {
     setLoading(true)
     try {
+      // 格式化日期为本地时间的 YYYY-MM-DD 格式
+      let formattedDate: string | undefined
+      if (selectedDate) {
+        const year = selectedDate.getFullYear()
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0')
+        const day = String(selectedDate.getDate()).padStart(2, '0')
+        formattedDate = `${year}-${month}-${day}`
+      }
+
       const data = await getTeams({
         game: selectedGame,
-        status: 'open'
+        status: 'open',
+        search: searchQuery || undefined,
+        date: formattedDate,
+        page: currentPage,
+        limit: itemsPerPage
       })
-      setTeams(data)
+      setTeams(data.teams)
+      setTotalPages(data.totalPages)
+      setTotal(data.total)
     } catch (error) {
       console.error('获取组队列表失败:', error)
     } finally {
@@ -233,40 +255,6 @@ export default function TeamsPage() {
     }
   }
 
-  // 筛选组队
-  const filteredTeams = teams.filter(team => {
-    // 过滤已过期的队伍
-    const now = new Date()
-    const endTime = new Date(team.end_time)
-    if (endTime < now) return false
-
-    const matchSearch = team.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       team.description?.toLowerCase().includes(searchQuery.toLowerCase())
-
-    if (!matchSearch) return false
-
-    if (selectedGame !== '全部' && team.game !== selectedGame) return false
-
-    if (selectedDate) {
-      const teamDate = new Date(team.start_time).toLocaleDateString('zh-CN')
-      const filterDate = new Date(selectedDate).toLocaleDateString('zh-CN')
-      if (teamDate !== filterDate) return false
-    }
-
-    return true
-  })
-
-  // 分页计算
-  const totalPages = Math.ceil(filteredTeams.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedTeams = filteredTeams.slice(startIndex, endIndex)
-
-  // 当筛选条件改变时，重置到第一页
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, selectedGame, selectedDate])
-
   // 获取状态标签
   const getStatusBadge = (status: string, memberCount: number, maxMembers: number) => {
     if (status === 'full' || memberCount >= maxMembers) {
@@ -355,7 +343,7 @@ export default function TeamsPage() {
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
           <p className="mt-4 text-muted-foreground">加载中...</p>
         </div>
-      ) : filteredTeams.length === 0 ? (
+      ) : teams.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Gamepad2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -373,7 +361,7 @@ export default function TeamsPage() {
       ) : (
         <>
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {paginatedTeams.map(team => (
+            {teams.map(team => (
               <TeamCard
                 key={team.id}
                 team={team}

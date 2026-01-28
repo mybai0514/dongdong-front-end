@@ -8,11 +8,15 @@ import type { Bindings } from '../types'
 
 const teamsRouter = new Hono<{ Bindings: Bindings }>()
 
-// 获取所有组队信息（支持筛选）
+// 获取所有组队信息（支持筛选和分页）
 teamsRouter.get('/', async (c) => {
   try {
     const game = c.req.query('game')
     const status = c.req.query('status') || 'open'
+    const search = c.req.query('search')
+    const date = c.req.query('date')
+    const page = parseInt(c.req.query('page') || '1')
+    const limit = parseInt(c.req.query('limit') || '9')
     const token = extractToken(c.req.header('Authorization'))
 
     const db = drizzle(c.env.DB)
@@ -28,9 +32,55 @@ teamsRouter.get('/', async (c) => {
       query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any
     }
 
-    const allTeams = await query.orderBy(desc(teams.created_at)).all()
+    let allTeams = await query.orderBy(desc(teams.created_at)).all()
+
+    // 前端筛选：搜索和日期（因为 Drizzle ORM 的 like 查询在 D1 上可能有限制）
+    if (search) {
+      const searchLower = search.toLowerCase()
+      allTeams = allTeams.filter(team =>
+        team.title.toLowerCase().includes(searchLower) ||
+        (team.description && team.description.toLowerCase().includes(searchLower))
+      )
+    }
+
+    if (date) {
+      allTeams = allTeams.filter(team => {
+        try {
+          // 将 start_time 转换为 ISO 字符串，提取日期部分（不受时区影响）
+          const startTime = team.start_time
+          let teamDateStr: string
+
+          if (startTime instanceof Date) {
+            // 如果是 Date 对象，转为 ISO 字符串
+            teamDateStr = startTime.toISOString().split('T')[0]
+          } else if (typeof startTime === 'string') {
+            // 如果是字符串，直接提取日期部分
+            teamDateStr = startTime.split('T')[0]
+          } else {
+            return false
+          }
+
+          return teamDateStr === date
+        } catch (error) {
+          console.error('日期解析错误:', error, team.start_time)
+          return false
+        }
+      })
+    }
+
+    // 过滤已过期的队伍
+    const now = new Date()
+    allTeams = allTeams.filter(team => new Date(team.end_time) >= now)
+
+    // 计算分页
+    const total = allTeams.length
+    const totalPages = Math.ceil(total / limit)
+    const startIndex = (page - 1) * limit
+    const endIndex = startIndex + limit
+    const paginatedTeams = allTeams.slice(startIndex, endIndex)
 
     // 如果用户已登录，批量查询成员状态
+    let teamsWithMembership = paginatedTeams
     if (token) {
       const user = await validateToken(db, token)
       if (user) {
@@ -41,15 +91,21 @@ teamsRouter.get('/', async (c) => {
 
         const membershipMap = new Map(memberships.map(m => [m.team_id, true]))
 
-        return c.json(allTeams.map(team => ({
+        teamsWithMembership = paginatedTeams.map(team => ({
           ...team,
           isMember: team.creator_id === user.id || membershipMap.has(team.id),
           isCreator: team.creator_id === user.id
-        })))
+        }))
       }
     }
 
-    return c.json(allTeams)
+    return c.json({
+      teams: teamsWithMembership,
+      total,
+      page,
+      limit,
+      totalPages
+    })
   } catch (error) {
     console.error('获取组队列表错误:', error)
     return c.json({ error: '获取组队列表失败' }, 500)

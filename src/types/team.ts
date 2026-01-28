@@ -29,6 +29,15 @@ export interface Team {
   isCreator?: boolean
 }
 
+// 分页响应
+export interface PaginatedTeamsResponse {
+  teams: Team[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
 // 创建队伍表单数据
 export interface CreateTeamFormData {
   game: string

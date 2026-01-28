@@ -18,6 +18,7 @@ export type {
   CreateTeamFormData,
   TeamMember,
   MembershipStatus,
+  PaginatedTeamsResponse,
   Feedback,
   FeedbackMood,
   CreateFeedbackFormData,

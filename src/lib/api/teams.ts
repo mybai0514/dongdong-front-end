@@ -11,15 +11,20 @@ import type {
   CreateTeamResponse,
   JoinTeamResponse,
   SuccessResponse,
+  PaginatedTeamsResponse,
 } from '@/types'
 
 /**
- * 获取队伍列表
+ * 获取队伍列表（支持分页）
  */
 export async function getTeams(params?: {
   game?: string
   status?: string
-}): Promise<Team[]> {
+  search?: string
+  date?: string
+  page?: number
+  limit?: number
+}): Promise<PaginatedTeamsResponse> {
   const queryParams: Record<string, string> = {}
 
   if (params?.game && params.game !== '全部') {
@@ -28,8 +33,20 @@ export async function getTeams(params?: {
   if (params?.status) {
     queryParams.status = params.status
   }
+  if (params?.search) {
+    queryParams.search = params.search
+  }
+  if (params?.date) {
+    queryParams.date = params.date
+  }
+  if (params?.page) {
+    queryParams.page = params.page.toString()
+  }
+  if (params?.limit) {
+    queryParams.limit = params.limit.toString()
+  }
 
-  return get<Team[]>('/api/teams', queryParams)
+  return get<PaginatedTeamsResponse>('/api/teams', queryParams)
 }
 
 /**
