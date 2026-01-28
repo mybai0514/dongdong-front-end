@@ -8,6 +8,15 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { DatePicker } from '@/components/ui/date-picker'
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
+import {
   Users,
   Clock,
   MessageCircle,
@@ -52,6 +61,10 @@ export default function TeamsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedGame, setSelectedGame] = useState('全部')
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 9 // 每页显示9个队伍（3x3网格）
 
   // 加入队伍相关状态
   const [joiningTeamId, setJoiningTeamId] = useState<number | null>(null)
@@ -243,6 +256,17 @@ export default function TeamsPage() {
     return true
   })
 
+  // 分页计算
+  const totalPages = Math.ceil(filteredTeams.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedTeams = filteredTeams.slice(startIndex, endIndex)
+
+  // 当筛选条件改变时，重置到第一页
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedGame, selectedDate])
+
   // 获取状态标签
   const getStatusBadge = (status: string, memberCount: number, maxMembers: number) => {
     if (status === 'full' || memberCount >= maxMembers) {
@@ -347,21 +371,81 @@ export default function TeamsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {filteredTeams.map(team => (
-            <TeamCard
-              key={team.id}
-              team={team}
-              user={user}
-              joiningTeamId={joiningTeamId}
-              onJoin={showJoinConfirm}
-              onShowContact={showContact}
-              onShowMembers={showMembers}
-              getStatusBadge={getStatusBadge}
-              getContactIcon={getContactIcon}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {paginatedTeams.map(team => (
+              <TeamCard
+                key={team.id}
+                team={team}
+                user={user}
+                joiningTeamId={joiningTeamId}
+                onJoin={showJoinConfirm}
+                onShowContact={showContact}
+                onShowMembers={showMembers}
+                getStatusBadge={getStatusBadge}
+                getContactIcon={getContactIcon}
+              />
+            ))}
+          </div>
+
+          {/* 分页组件 */}
+          {totalPages > 1 && (
+            <div className="mt-8">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+
+                  {/* 页码显示逻辑 */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    // 显示第一页、最后一页、当前页及其前后各一页
+                    const showPage =
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+
+                    // 显示省略号
+                    const showEllipsisBefore = page === currentPage - 2 && currentPage > 3
+                    const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2
+
+                    if (showEllipsisBefore || showEllipsisAfter) {
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )
+                    }
+
+                    if (!showPage) return null
+
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </>
       )}
 
       {/* 未登录提示 */}
