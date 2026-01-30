@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { sessions, users } from '../../../db/schema'
-import { getNowUTC8 } from './time'
+import { getNowUTC8, compareTimesUTC8 } from './time'
 import type { DrizzleDB, User } from '../types'
 
 /**
@@ -15,14 +15,15 @@ export function generateToken(): string {
  */
 export async function createSession(db: DrizzleDB, userId: number): Promise<string> {
   const token = generateToken()
-  const now = getNowUTC8()
-  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7天后过期
+  const nowUTC8 = getNowUTC8()
+  const expiresAtTime = nowUTC8.getTime() + 7 * 24 * 60 * 60 * 1000 // 7天后过期
+  const expiresAt = new Date(expiresAtTime)
 
   await db.insert(sessions).values({
     user_id: userId,
     token,
     expires_at: expiresAt,
-    created_at: now
+    created_at: nowUTC8
   }).run()
 
   return token
@@ -39,9 +40,8 @@ export async function validateToken(db: DrizzleDB, token: string): Promise<User 
 
   if (!session) return null
 
-  // 检查是否过期
-  const now = getNowUTC8()
-  if (new Date(session.expires_at) <= now) {
+  // 检查是否过期（使用 UTC+8 时区比较）
+  if (compareTimesUTC8(session.expires_at, getNowUTC8()) < 0) {
     // 删除过期的 session
     await db.delete(sessions).where(eq(sessions.token, token)).run()
     return null
