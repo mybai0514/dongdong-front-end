@@ -90,7 +90,7 @@ export default function ForumPage() {
       {/* 页面标题 */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">游戏论坛</h1>
-        <p className="text-muted-foreground">分享游戏心得，交流游戏技巧</p>
+        <p className="text-muted-foreground">社区互动、话题讨论</p>
       </div>
 
       {/* 分类卡片 */}
@@ -113,7 +113,7 @@ export default function ForumPage() {
                         </CardDescription>
                       </div>
                     </div>
-                    <ArrowRight className={`${colors.text} h-6 w-6 flex-shrink-0`} />
+                    <ArrowRight className={`${colors.text} h-6 w-6 shrink-0`} />
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">

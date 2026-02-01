@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Separator } from '@/components/ui/separator'
 import {
   Pagination,
   PaginationContent,
@@ -31,8 +33,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { MessageSquare, Eye, ThumbsUp, Clock, Search, Plus, TrendingUp, Loader2, Pin } from 'lucide-react'
-import { formatTimeForDisplay } from '@/lib/time'
+import { MessageSquare, Eye, ThumbsUp, Clock, Search, Plus, TrendingUp, Loader2, Pin, Flame } from 'lucide-react'
+import { formatRelativeTime, getNowInUTC8, toUTC8 } from '@/lib/time'
 import { useUser } from '@/hooks'
 import { Textarea } from '@/components/ui/textarea'
 import { getForumPosts, createForumPost } from '@/lib/api'
@@ -41,17 +43,14 @@ import type { ForumCategory, ForumPost } from '@/types'
 export default function CategoryPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
   const user = useUser()
   const categorySlug = params.slug as string
 
   const [category, setCategory] = useState<ForumCategory | null>(null)
   const [posts, setPosts] = useState<ForumPost[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<'latest' | 'views' | 'likes'>('latest')
-
-  // 分页状态
-  const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
   const itemsPerPage = 12
@@ -62,13 +61,15 @@ export default function CategoryPage() {
   const [newPostContent, setNewPostContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  // 从 URL 读取查询参数作为数据源
+  const currentPage = parseInt(searchParams.get('page') || '1')
+  const searchQuery = searchParams.get('search') || ''
+  const sortBy = (searchParams.get('sort') as 'latest' | 'views' | 'likes') || 'latest'
+
+  // 监听参数变化，获取数据
   useEffect(() => {
     fetchPosts()
   }, [categorySlug, currentPage, sortBy, searchQuery])
-
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, sortBy])
 
   const fetchPosts = async () => {
     setLoading(true)
@@ -98,23 +99,23 @@ export default function CategoryPage() {
     }
 
     if (!newPostTitle.trim() || !newPostContent.trim()) {
-      alert('标题和内容不能为空')
+      toast.warning('标题和内容不能为空')
       return
     }
 
     if (newPostTitle.length > 200) {
-      alert('标题不能超过200个字符')
+      toast.warning('标题不能超过200个字符')
       return
     }
 
     if (newPostContent.length > 10000) {
-      alert('内容不能超过10000个字符')
+      toast.warning('内容不能超过10000个字符')
       return
     }
 
     setSubmitting(true)
     try {
-      const data = await createForumPost(categorySlug, {
+      await createForumPost(categorySlug, {
         title: newPostTitle.trim(),
         content: newPostContent.trim()
       })
@@ -124,11 +125,12 @@ export default function CategoryPage() {
       setNewPostTitle('')
       setNewPostContent('')
 
-      // 跳转到新帖子详情页
-      router.push(`/forum/${categorySlug}/${data.post.id}`)
+      // 重新加载帖子列表
+      await fetchPosts()
+      toast.success('发布成功！')
     } catch (error: any) {
       console.error('发布帖子失败:', error)
-      alert(error.message || '发布帖子失败')
+      toast.error(error.message || '发布帖子失败')
     } finally {
       setSubmitting(false)
     }
@@ -166,6 +168,20 @@ export default function CategoryPage() {
   const truncateText = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text
     return text.substring(0, maxLength) + '...'
+  }
+
+  // 判断是否是新帖（24小时内）
+  const isNewPost = (createdAt: string | null) => {
+    if (!createdAt) return false
+    const postTime = toUTC8(createdAt).getTime()
+    const now = getNowInUTC8().getTime()
+    const hoursDiff = (now - postTime) / (1000 * 60 * 60)
+    return hoursDiff <= 24
+  }
+
+  // 判断是否是热帖（浏览数 > 50 或评论数 > 5 或点赞数 > 10）
+  const isHotPost = (post: ForumPost) => {
+    return post.views_count > 10 || post.comments_count > 5 || post.likes_count > 10
   }
 
   if (loading && !category) {
@@ -234,11 +250,24 @@ export default function CategoryPage() {
           <Input
             placeholder="搜索帖子标题或内容..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              const newSearch = e.target.value
+              const params = new URLSearchParams()
+              if (newSearch) params.set('search', newSearch)
+              if (sortBy !== 'latest') params.set('sort', sortBy)
+              const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
+              router.replace(newUrl)
+            }}
             className="pl-10"
           />
         </div>
-        <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'latest' | 'views' | 'likes')}>
+        <Select value={sortBy} onValueChange={(value) => {
+          const params = new URLSearchParams()
+          if (searchQuery) params.set('search', searchQuery)
+          if (value !== 'latest') params.set('sort', value)
+          const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
+          router.replace(newUrl)
+        }}>
           <SelectTrigger className="w-full sm:w-45">
             <SelectValue placeholder="排序方式" />
           </SelectTrigger>
@@ -277,52 +306,82 @@ export default function CategoryPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {posts.map((post) => (
-              <Link key={post.id} href={`/forum/${categorySlug}/${post.id}`}>
-                <Card className="h-full hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col">
-                  <CardHeader className="flex-none">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <CardTitle className="text-lg line-clamp-2 flex-1">
-                        {post.is_pinned && (
-                          <Pin className="inline h-4 w-4 mr-1 text-orange-500" />
-                        )}
-                        {post.title}
-                      </CardTitle>
-                    </div>
-                    <CardDescription className="line-clamp-3 min-h-15">
-                      {truncateText(post.content, 120)}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1 flex flex-col justify-end">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="space-y-2 mb-8">
+            {posts.map((post) => {
+              const postDetailParams = new URLSearchParams()
+              if (currentPage > 1) postDetailParams.set('page', currentPage.toString())
+              if (searchQuery) postDetailParams.set('search', searchQuery)
+              if (sortBy !== 'latest') postDetailParams.set('sort', sortBy)
+              const queryString = postDetailParams.toString()
+              const postUrl = `/forum/${categorySlug}/${post.id}${queryString ? `?${queryString}` : ''}`
+
+              return (
+              <Link key={post.id} href={postUrl}>
+                <div className="border rounded-md bg-card hover:shadow-sm hover:border-primary/20 transition-all duration-200 cursor-pointer py-3 px-4 mb-2">
+                  <div className="flex items-start gap-3">
+                    {/* 作者头像 */}
+                    <Avatar className="h-10 w-10 shrink-0 mt-0.5">
+                      <AvatarImage src="" />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {post.author_username?.[0]?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    {/* 中间内容 */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {post.is_pinned && (
+                            <Pin className="h-4 w-4 text-orange-500 shrink-0" />
+                          )}
+                          <h3 className="font-semibold text-base truncate">{post.title}</h3>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {isNewPost(post.created_at) && (
+                              <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 text-[10px] px-1 py-0 h-4 shrink-0 font-medium">
+                                NEW
+                              </Badge>
+                            )}
+                            {isHotPost(post) && (
+                              <Flame className="h-4 w-4 text-orange-500 shrink-0 fill-orange-500" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-1 mb-2">
+                        {truncateText(post.content, 100)}
+                      </p>
+                      <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
                         <span className="font-medium">{post.author_username}</span>
-                        <span>•</span>
+                        <span className="text-muted-foreground/50">•</span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {post.created_at ? formatTimeForDisplay(post.created_at) : '-'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Eye className="h-4 w-4" />
-                          {post.views_count}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MessageSquare className="h-4 w-4" />
-                          {post.comments_count}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <ThumbsUp className="h-4 w-4" />
-                          {post.likes_count}
+                          {post.created_at ? formatRelativeTime(post.created_at) : '-'}
                         </span>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+
+                    {/* 右侧统计数据 */}
+                    <div className="flex items-center gap-4 shrink-0">
+                      <div className="flex flex-col items-end gap-1.5">
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <Eye className="h-3.5 w-3.5 text-blue-500" />
+                          <span className="font-medium text-foreground min-w-[2rem] text-right">{post.views_count}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <MessageSquare className="h-3.5 w-3.5 text-green-500" />
+                          <span className="font-medium text-foreground min-w-[2rem] text-right">{post.comments_count}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <ThumbsUp className="h-3.5 w-3.5 text-red-500" />
+                          <span className="font-medium text-foreground min-w-[2rem] text-right">{post.likes_count}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </Link>
-            ))}
+              )
+            })}
           </div>
 
           {/* 分页 */}
@@ -331,7 +390,17 @@ export default function CategoryPage() {
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    onClick={() => {
+                      if (currentPage > 1) {
+                        const params = new URLSearchParams()
+                        const newPage = currentPage - 1
+                        if (newPage > 1) params.set('page', newPage.toString())
+                        if (searchQuery) params.set('search', searchQuery)
+                        if (sortBy !== 'latest') params.set('sort', sortBy)
+                        const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
+                        router.push(newUrl)
+                      }
+                    }}
                     className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                   />
                 </PaginationItem>
@@ -346,7 +415,14 @@ export default function CategoryPage() {
                     return (
                       <PaginationItem key={page}>
                         <PaginationLink
-                          onClick={() => setCurrentPage(page)}
+                          onClick={() => {
+                            const params = new URLSearchParams()
+                            if (page > 1) params.set('page', page.toString())
+                            if (searchQuery) params.set('search', searchQuery)
+                            if (sortBy !== 'latest') params.set('sort', sortBy)
+                            const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
+                            router.push(newUrl)
+                          }}
                           isActive={currentPage === page}
                           className="cursor-pointer"
                         >
@@ -366,7 +442,17 @@ export default function CategoryPage() {
 
                 <PaginationItem>
                   <PaginationNext
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    onClick={() => {
+                      if (currentPage < totalPages) {
+                        const params = new URLSearchParams()
+                        const newPage = currentPage + 1
+                        params.set('page', newPage.toString())
+                        if (searchQuery) params.set('search', searchQuery)
+                        if (sortBy !== 'latest') params.set('sort', sortBy)
+                        const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
+                        router.push(newUrl)
+                      }
+                    }}
                     className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                   />
                 </PaginationItem>

@@ -4,7 +4,6 @@ import { eq, desc, and, inArray } from 'drizzle-orm'
 import { forumCategories, forumPosts, forumComments, forumLikes, users } from '../../../db/schema'
 import { authMiddleware } from '../middleware/auth'
 import { extractToken, validateToken } from '../utils/token'
-import { getNowUTC8 } from '../utils/time'
 import type { Bindings } from '../types'
 
 const forumRouter = new Hono<{ Bindings: Bindings }>()
@@ -275,8 +274,8 @@ forumRouter.post('/:categorySlug/posts', authMiddleware, async (c) => {
       author_id: user.id,
       title: title.trim(),
       content: content.trim(),
-      created_at: getNowUTC8(),
-      updated_at: getNowUTC8()
+      created_at: new Date(),
+      updated_at: new Date()
     }).returning().get()
 
     // 更新分类帖子数
@@ -329,7 +328,7 @@ forumRouter.post('/posts/:postId/like', authMiddleware, async (c) => {
       user_id: user.id,
       post_id: postId,
       comment_id: null,
-      created_at: getNowUTC8()
+      created_at: new Date()
     }).run()
 
     // 更新帖子点赞数

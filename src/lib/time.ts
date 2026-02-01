@@ -71,6 +71,36 @@ export function formatTimeForDisplay(date: Date | string | number, showSeconds =
 }
 
 /**
+ * 格式化时间为相对时间显示 (如: 刚刚、5分钟前、2小时前、3天前、01-15)
+ * 用于论坛列表等场景
+ */
+export function formatRelativeTime(date: Date | string | number): string {
+  const now = getNowInUTC8().getTime()
+  const targetTime = toUTC8(date).getTime()
+  const diffMs = now - targetTime
+  const diffSeconds = Math.floor(diffMs / 1000)
+  const diffMinutes = Math.floor(diffSeconds / 60)
+  const diffHours = Math.floor(diffMinutes / 60)
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffSeconds < 60) {
+    return '刚刚'
+  } else if (diffMinutes < 60) {
+    return `${diffMinutes}分钟前`
+  } else if (diffHours < 24) {
+    return `${diffHours}小时前`
+  } else if (diffDays < 30) {
+    return `${diffDays}天前`
+  } else {
+    // 30天以上显示具体日期 (月-日 格式)
+    const d = toUTC8(date)
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(d.getUTCDate()).padStart(2, '0')
+    return `${month}-${day}`
+  }
+}
+
+/**
  * 比较两个时间（都转换为 UTC+8 后比较）
  */
 export function compareTimesUTC8(date1: Date | string | number, date2: Date | string | number): number {
