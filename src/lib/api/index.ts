@@ -63,3 +63,18 @@ export {
 } from './ratings'
 
 export type { RatingTag, TeamMemberRating, RatingDetail } from './ratings'
+
+// 论坛 API
+export {
+  getForumCategories,
+  getForumCategory,
+  getForumPosts,
+  getForumPost,
+  createForumPost,
+  likeForumPost,
+  unlikeForumPost,
+  getForumComments,
+  createForumComment,
+  likeForumComment,
+  unlikeForumComment,
+} from './forum'

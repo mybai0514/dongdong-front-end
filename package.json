@@ -4,9 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:worker": "wrangler dev --port 8787",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply dongdong-db --local",
+    "db:migrate:prod": "wrangler d1 migrations apply dongdong-db --remote"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.8",

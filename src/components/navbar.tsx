@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { GamepadIcon, Users, MessageSquare, User, LogOut, Clock } from 'lucide-react'
+import { GamepadIcon, Users, MessageSquare, User, LogOut, Clock, MessagesSquare } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,15 +41,22 @@ export function Navbar() {
 
         {/* 导航菜单 */}
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-          <Link 
-            href="/teams" 
+          <Link
+            href="/teams"
             className="flex items-center space-x-1 transition-colors hover:text-primary"
           >
             <Users className="h-4 w-4" />
             <span>找队友</span>
           </Link>
-          <Link 
-            href="/feedback" 
+          <Link
+            href="/forum"
+            className="flex items-center space-x-1 transition-colors hover:text-primary"
+          >
+            <MessagesSquare className="h-4 w-4" />
+            <span>论坛</span>
+          </Link>
+          <Link
+            href="/feedback"
             className="flex items-center space-x-1 transition-colors hover:text-primary"
           >
             <MessageSquare className="h-4 w-4" />

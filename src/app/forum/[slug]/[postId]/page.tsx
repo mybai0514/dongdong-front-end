@@ -1,0 +1,230 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useParams, useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  ArrowLeft,
+  Eye,
+  ThumbsUp,
+  MessageSquare,
+  Clock,
+  Loader2,
+  Pin
+} from 'lucide-react'
+import { formatTimeForDisplay } from '@/lib/time'
+import { useUser } from '@/hooks'
+import { getForumPost, likeForumPost, unlikeForumPost } from '@/lib/api'
+import type { ForumPost } from '@/types'
+
+export default function PostDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const user = useUser()
+  const postId = parseInt(params.postId as string)
+  const categorySlug = params.slug as string
+
+  const [post, setPost] = useState<ForumPost | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [likePending, setLikePending] = useState(false)
+
+  useEffect(() => {
+    fetchPost()
+  }, [postId])
+
+  const fetchPost = async () => {
+    setLoading(true)
+    try {
+      const data = await getForumPost(postId)
+      setPost(data.post)
+    } catch (error) {
+      console.error('获取帖子详情失败:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLike = async () => {
+    if (!user) {
+      router.push(`/login?redirect=/forum/${categorySlug}/${postId}`)
+      return
+    }
+
+    if (likePending) return
+
+    setLikePending(true)
+    try {
+      if (post?.isLiked) {
+        const data = await unlikeForumPost(postId)
+        setPost(prev => prev ? { ...prev, isLiked: false, likes_count: data.likes_count } : null)
+      } else {
+        const data = await likeForumPost(postId)
+        setPost(prev => prev ? { ...prev, isLiked: true, likes_count: data.likes_count } : null)
+      }
+    } catch (error) {
+      console.error('点赞操作失败:', error)
+      alert('操作失败，请重试')
+    } finally {
+      setLikePending(false)
+    }
+  }
+
+  const getCategoryColor = (slug: string) => {
+    if (slug === 'lusty') {
+      return {
+        badge: 'bg-orange-100 text-orange-700 border-orange-200'
+      }
+    } else if (slug === 'fishy') {
+      return {
+        badge: 'bg-blue-100 text-blue-700 border-blue-200'
+      }
+    }
+    return {
+      badge: 'bg-gray-100 text-gray-700 border-gray-200'
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="flex items-center justify-center min-h-100">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-muted-foreground">加载中...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!post) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="text-center py-12">
+          <h3 className="text-xl font-semibold mb-2">帖子不存在</h3>
+          <Link href="/forum">
+            <Button>返回论坛首页</Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  const colors = getCategoryColor(post.category_slug || '')
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* 返回按钮 */}
+      <div className="mb-6">
+        <Link href={`/forum/${post.category_slug}`}>
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            返回 {post.category_name}
+          </Button>
+        </Link>
+      </div>
+
+      {/* 帖子内容卡片 */}
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="space-y-4">
+            {/* 标题和分类 */}
+            <div>
+              <div className="flex items-start gap-3 mb-3">
+                {post.is_pinned && (
+                  <Pin className="h-5 w-5 text-orange-500 shrink-0 mt-1" />
+                )}
+                <h1 className="text-3xl font-bold flex-1">{post.title}</h1>
+              </div>
+              <Badge variant="outline" className={colors.badge}>
+                {post.category_name}
+              </Badge>
+            </div>
+
+            {/* 作者信息和统计 */}
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <Avatar>
+                  <AvatarImage src={post.author_avatar || undefined} />
+                  <AvatarFallback>{post.author_username?.[0] || 'U'}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium">{post.author_username}</div>
+                  <div className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {post.created_at ? formatTimeForDisplay(post.created_at) : '-'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Eye className="h-4 w-4" />
+                  {post.views_count}
+                </span>
+                <span className="flex items-center gap-1">
+                  <MessageSquare className="h-4 w-4" />
+                  {post.comments_count}
+                </span>
+                <span className="flex items-center gap-1">
+                  <ThumbsUp className="h-4 w-4" />
+                  {post.likes_count}
+                </span>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+
+        <Separator />
+
+        <CardContent className="pt-6">
+          {/* 帖子内容 */}
+          <div className="prose prose-slate max-w-none">
+            <div className="whitespace-pre-wrap wrap-break-word">
+              {post.content}
+            </div>
+          </div>
+
+          {/* 点赞按钮 */}
+          <div className="mt-8 pt-6 border-t">
+            <Button
+              variant={post.isLiked ? "default" : "outline"}
+              size="lg"
+              onClick={handleLike}
+              disabled={likePending}
+              className="w-full sm:w-auto"
+            >
+              {likePending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <ThumbsUp className={`h-4 w-4 mr-2 ${post.isLiked ? 'fill-current' : ''}`} />
+              )}
+              {post.isLiked ? '已点赞' : '点赞'} ({post.likes_count})
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 评论区域 - 暂时显示占位符 */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            评论 ({post.comments_count})
+          </h2>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p>评论功能即将上线</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

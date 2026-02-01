@@ -24,6 +24,19 @@ export type {
   CreateFeedbackFormData,
 } from './team'
 
+// 论坛相关类型
+export type {
+  ForumCategory,
+  ForumPost,
+  PostStatus,
+  PaginatedPostsResponse,
+  CreatePostFormData,
+  ForumComment,
+  CommentStatus,
+  CreateCommentFormData,
+  LikeResponse,
+} from './forum'
+
 // API 响应类型
 export type {
   ApiResponse,
