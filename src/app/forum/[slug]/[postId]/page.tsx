@@ -127,12 +127,10 @@ export default function PostDetailPage() {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* 返回按钮 */}
       <div className="mb-6">
-        <Link href={`/forum/${post.category_slug}`}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            返回 {post.category_name}
-          </Button>
-        </Link>
+        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          返回 {post?.category_name}
+        </Button>
       </div>
 
       {/* 帖子内容卡片 */}

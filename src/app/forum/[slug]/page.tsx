@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Separator } from '@/components/ui/separator'
 import {
   Pagination,
   PaginationContent,
@@ -33,10 +32,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { MessageSquare, Eye, ThumbsUp, Clock, Search, Plus, TrendingUp, Loader2, Pin, Flame } from 'lucide-react'
+import { MessageSquare, Eye, ThumbsUp, Clock, Search, Plus, Loader2, Pin, Flame } from 'lucide-react'
 import { formatRelativeTime, getNowInUTC8, toUTC8 } from '@/lib/time'
 import { useUser } from '@/hooks'
-import { useForumListStore } from '@/stores'
 import { Textarea } from '@/components/ui/textarea'
 import { getForumPosts, createForumPost } from '@/lib/api'
 import type { ForumCategory, ForumPost } from '@/types'
@@ -44,27 +42,20 @@ import type { ForumCategory, ForumPost } from '@/types'
 export default function CategoryPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const user = useUser()
   const categorySlug = params.slug as string
 
-  // Zustand store
-  const {
-    category,
-    posts,
-    loading,
-    totalPages,
-    total,
-    currentPage,
-    searchQuery,
-    sortBy,
-    setCategory,
-    setCategorySlug,
-    setPosts,
-    setPage,
-    setSearch,
-    setSortBy,
-    setLoading,
-  } = useForumListStore()
+  // 从 URL 查询参数获取状态
+  const currentPage = parseInt(searchParams.get('page') || '1', 10)
+  const searchQuery = searchParams.get('search') || ''
+  const sortBy = (searchParams.get('sort') || 'latest') as 'latest' | 'views' | 'likes'
+
+  // 本地状态
+  const [category, setCategory] = useState<ForumCategory | null>(null)
+  const [posts, setPosts] = useState<ForumPost[]>([])
+  const [loading, setLoading] = useState(true)
+  const [totalPages, setTotalPages] = useState(1)
 
   // 发帖对话框
   const [createPostDialog, setCreatePostDialog] = useState(false)
@@ -77,19 +68,10 @@ export default function CategoryPage() {
 
   const itemsPerPage = 12
 
-  // 同步 store 中的 searchQuery 到本地输入框状态
-  useEffect(() => {
-    setLocalSearchInput(searchQuery)
-  }, [searchQuery])
-
-  // 初始化分类
-  useEffect(() => {
-    setCategorySlug(categorySlug)
-  }, [categorySlug])
-
   // 监听分类和查询参数变化，获取数据
   useEffect(() => {
     fetchPosts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categorySlug, currentPage, sortBy, searchQuery])
 
   const fetchPosts = async () => {
@@ -102,12 +84,49 @@ export default function CategoryPage() {
         search: searchQuery || undefined
       })
 
-      setPosts(data.posts || [], data.total || 0, data.totalPages || 1)
+      setPosts(data.posts || [])
       setCategory(data.category || null)
+      setTotalPages(data.totalPages || 1)
     } catch (error) {
       console.error('获取帖子列表失败:', error)
+    } finally {
       setLoading(false)
     }
+  }
+
+  // 更新 URL 查询参数的辅助函数
+  const updateQueryParams = (newParams: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams)
+
+    Object.entries(newParams).forEach(([key, value]) => {
+      if (value === null || value === '') {
+        params.delete(key)
+      } else {
+        params.set(key, value)
+      }
+    })
+
+    // 重置到第一页（除非明确指定了 page）
+    if (newParams.page === undefined && !(newParams.search === undefined && newParams.sort === undefined)) {
+      params.set('page', '1')
+    }
+
+    router.push(`?${params.toString()}`)
+  }
+
+  // 处理搜索
+  const handleSearch = (query: string) => {
+    updateQueryParams({ search: query, page: '1' })
+  }
+
+  // 处理排序
+  const handleSortChange = (newSort: string) => {
+    updateQueryParams({ sort: newSort, page: '1' })
+  }
+
+  // 处理分页
+  const handlePageChange = (page: number) => {
+    updateQueryParams({ page: page.toString() })
   }
 
   const handleCreatePost = async () => {
@@ -146,9 +165,10 @@ export default function CategoryPage() {
       // 重新加载帖子列表
       await fetchPosts()
       toast.success('发布成功！')
-    } catch (error: any) {
+    } catch (error) {
       console.error('发布帖子失败:', error)
-      toast.error(error.message || '发布帖子失败')
+      const errorMessage = error instanceof Error ? error.message : '发布帖子失败'
+      toast.error(errorMessage)
     } finally {
       setSubmitting(false)
     }
@@ -271,18 +291,18 @@ export default function CategoryPage() {
             onChange={(e) => setLocalSearchInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                setSearch(localSearchInput)
+                handleSearch(localSearchInput)
               }
             }}
             onBlur={() => {
               if (localSearchInput !== searchQuery) {
-                setSearch(localSearchInput)
+                handleSearch(localSearchInput)
               }
             }}
             className="pl-10"
           />
         </div>
-        <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'latest' | 'views' | 'likes')}>
+        <Select value={sortBy} onValueChange={(value) => handleSortChange(value)}>
           <SelectTrigger className="w-full sm:w-45">
             <SelectValue placeholder="排序方式" />
           </SelectTrigger>
@@ -398,7 +418,7 @@ export default function CategoryPage() {
                   <PaginationPrevious
                     onClick={() => {
                       if (currentPage > 1) {
-                        setPage(currentPage - 1)
+                        handlePageChange(currentPage - 1)
                       }
                     }}
                     className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
@@ -415,7 +435,7 @@ export default function CategoryPage() {
                     return (
                       <PaginationItem key={page}>
                         <PaginationLink
-                          onClick={() => setPage(page)}
+                          onClick={() => handlePageChange(page)}
                           isActive={currentPage === page}
                           className="cursor-pointer"
                         >
@@ -437,7 +457,7 @@ export default function CategoryPage() {
                   <PaginationNext
                     onClick={() => {
                       if (currentPage < totalPages) {
-                        setPage(currentPage + 1)
+                        handlePageChange(currentPage + 1)
                       }
                     }}
                     className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
