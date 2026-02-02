@@ -48,6 +48,7 @@ import type { User, Team, MembershipStatus, ContactMethod, TeamMember } from '@/
 import { getTeams, joinTeam, checkMembership, getTeamMembers, getUserReputation, ApiError, type UserReputation } from '@/lib/api'
 import { GAMES_WITH_ALL } from '@/lib/constants'
 import { useUser } from '@/hooks'
+import { useTeamsListStore } from '@/stores/useTeamsListStore'
 import { formatTimeForDisplay, getDateStringUTC8 } from '@/lib/time'
 
 interface ContactInfo {
@@ -57,20 +58,9 @@ interface ContactInfo {
 
 export default function TeamsPage() {
   const user = useUser()
-  const [teams, setTeams] = useState<Team[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedGame, setSelectedGame] = useState('全部')
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const store = useTeamsListStore()
 
-  // 分页状态
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [total, setTotal] = useState(0)
-  const itemsPerPage = 9 // 每页显示9个队伍（3x3网格）
-
-  // 加入队伍相关状态
-  const [joiningTeamId, setJoiningTeamId] = useState<number | null>(null)
+  // 本地 state 用于对话框状态
   const [contactDialog, setContactDialog] = useState<{
     open: boolean
     contact?: ContactInfo
@@ -94,37 +84,50 @@ export default function TeamsPage() {
     loading?: boolean
   }>({ open: false })
 
+  const itemsPerPage = 9 // 每页显示9个队伍（3x3网格）
+
+  // 本地搜索输入框状态（用于防止每次输入都调用接口）
+  const [localSearchInput, setLocalSearchInput] = useState(store.searchQuery)
+
+  // 从 store 获取状态
+  const teams = store.teams
+  const loading = store.loading
+  const searchQuery = store.searchQuery
+  const selectedGame = store.selectedGame || '全部'
+  const selectedDateStr = store.selectedDate
+  const currentPage = store.currentPage
+  const totalPages = store.totalPages
+  const total = store.total
+  const joiningTeamId = store.joiningTeamId
+
+  // 同步 store 中的 searchQuery 到本地输入框状态
+  useEffect(() => {
+    setLocalSearchInput(searchQuery)
+  }, [searchQuery])
+
   // 获取组队列表
   useEffect(() => {
     fetchTeamsList()
-  }, [selectedGame, currentPage, searchQuery, selectedDate])
-
-  // 当筛选条件改变时，重置到第一页
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, selectedGame, selectedDate])
+  }, [selectedGame, currentPage, searchQuery, selectedDateStr])
 
   const fetchTeamsList = async () => {
-    setLoading(true)
+    store.setLoading(true)
     try {
       // 使用 UTC+8 时区的日期字符串
-      const formattedDate = selectedDate ? getDateStringUTC8(selectedDate) : undefined
+      const formattedDate = selectedDateStr ? getDateStringUTC8(selectedDateStr) : undefined
 
       const data = await getTeams({
-        game: selectedGame,
+        game: selectedGame === '全部' ? undefined : selectedGame,
         status: 'open',
         search: searchQuery || undefined,
         date: formattedDate,
         page: currentPage,
         limit: itemsPerPage
       })
-      setTeams(data.teams)
-      setTotalPages(data.totalPages)
-      setTotal(data.total)
+      store.setTeams(data.teams, data.total, data.totalPages)
     } catch (error) {
       console.error('获取组队列表失败:', error)
-    } finally {
-      setLoading(false)
+      store.setLoading(false)
     }
   }
 
@@ -147,7 +150,7 @@ export default function TeamsPage() {
     const teamId = joinConfirmDialog.teamId
     if (!teamId) return
 
-    setJoiningTeamId(teamId)
+    store.setJoiningTeamId(teamId)
     setJoinConfirmDialog({ open: false })
 
     try {
@@ -169,7 +172,7 @@ export default function TeamsPage() {
       }
       console.error('加入队伍错误:', err)
     } finally {
-      setJoiningTeamId(null)
+      store.setJoiningTeamId(null)
     }
   }
 
@@ -303,13 +306,23 @@ export default function TeamsPage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="搜索组队标题或描述..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={localSearchInput}
+            onChange={(e) => setLocalSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                store.setSearch(localSearchInput)
+              }
+            }}
+            onBlur={() => {
+              if (localSearchInput !== searchQuery) {
+                store.setSearch(localSearchInput)
+              }
+            }}
             className="pl-10"
           />
         </div>
 
-        <Select value={selectedGame} onValueChange={setSelectedGame}>
+        <Select value={selectedGame} onValueChange={store.setSelectedGame}>
           <SelectTrigger className="w-full md:w-50">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="选择游戏" />
@@ -325,8 +338,8 @@ export default function TeamsPage() {
 
         <div className="w-full md:w-50">
           <DatePicker
-            date={selectedDate}
-            setDate={setSelectedDate}
+            date={selectedDateStr ? new Date(selectedDateStr) : undefined}
+            setDate={(date) => store.setSelectedDate(date ? getDateStringUTC8(date) : '')}
             placeholder="筛选日期"
           />
         </div>
@@ -378,7 +391,7 @@ export default function TeamsPage() {
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      onClick={() => store.setPage(Math.max(1, currentPage - 1))}
                       className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>
@@ -408,7 +421,7 @@ export default function TeamsPage() {
                     return (
                       <PaginationItem key={page}>
                         <PaginationLink
-                          onClick={() => setCurrentPage(page)}
+                          onClick={() => store.setPage(page)}
                           isActive={currentPage === page}
                           className="cursor-pointer"
                         >
@@ -420,7 +433,7 @@ export default function TeamsPage() {
 
                   <PaginationItem>
                     <PaginationNext
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      onClick={() => store.setPage(Math.min(totalPages, currentPage + 1))}
                       className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>

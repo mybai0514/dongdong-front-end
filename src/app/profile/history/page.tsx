@@ -59,6 +59,7 @@ import {
   type UserReputation
 } from '@/lib/api'
 import { useAuth } from '@/hooks'
+import { useTeamHistoryStore } from '@/stores'
 import type { Team, TeamMember } from '@/types'
 import { GAMES_WITH_ALL } from '@/lib/constants'
 import { formatTimeForDisplay } from '@/lib/time'
@@ -68,17 +69,32 @@ export default function HistoryPage() {
     redirectTo: '/login',
   })
 
-  const [myTeams, setMyTeams] = useState<Team[]>([])
-  const [joinedTeams, setJoinedTeams] = useState<Team[]>([])
-  const [loadingMyTeams, setLoadingMyTeams] = useState(true)
-  const [loadingJoinedTeams, setLoadingJoinedTeams] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedGame, setSelectedGame] = useState('全部')
-  const [activeTab, setActiveTab] = useState<'created' | 'joined'>('created')
+  // Zustand store
+  const {
+    myTeams,
+    joinedTeams,
+    loadingMyTeams,
+    loadingJoinedTeams,
+    searchQuery,
+    selectedGame,
+    activeTab,
+    myTeamsPage,
+    joinedTeamsPage,
+    myTotalPages,
+    joinedTotalPages,
+    setMyTeams,
+    setJoinedTeams,
+    setLoadingMyTeams,
+    setLoadingJoinedTeams,
+    setSearch,
+    setSelectedGame,
+    setActiveTab,
+    setMyTeamsPage,
+    setJoinedTeamsPage,
+  } = useTeamHistoryStore()
 
-  // 分页状态
-  const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10 // 每页显示 10 条历史记录
+  const currentPage = activeTab === 'created' ? myTeamsPage : joinedTeamsPage
 
   // 队伍详情弹窗状态
   const [membersDialog, setMembersDialog] = useState<{
@@ -114,6 +130,14 @@ export default function HistoryPage() {
   const [submittingRating, setSubmittingRating] = useState(false)
   const [ratedTeams, setRatedTeams] = useState<Set<number>>(new Set())
 
+  // 本地搜索输入框状态（用于防止每次输入都调用接口）
+  const [localSearchInput, setLocalSearchInput] = useState(searchQuery)
+
+  // 同步 store 中的 searchQuery 到本地输入框状态
+  useEffect(() => {
+    setLocalSearchInput(searchQuery)
+  }, [searchQuery])
+
   useEffect(() => {
     if (user) {
       fetchMyTeams(user.id)
@@ -123,14 +147,19 @@ export default function HistoryPage() {
 
   // 当筛选条件改变时，重置分页到第一页
   useEffect(() => {
-    setCurrentPage(1)
+    if (activeTab === 'created') {
+      setMyTeamsPage(1)
+    } else {
+      setJoinedTeamsPage(1)
+    }
   }, [searchQuery, selectedGame, activeTab])
 
   const fetchMyTeams = async (userId: number) => {
     setLoadingMyTeams(true)
     try {
       const data = await getUserTeams(userId)
-      setMyTeams(data)
+      const totalPages = Math.ceil(data.length / itemsPerPage)
+      setMyTeams(data, totalPages)
       // 检查已完成队伍的评分状态
       await checkRatingStatus(data)
     } catch (error) {
@@ -144,7 +173,8 @@ export default function HistoryPage() {
     setLoadingJoinedTeams(true)
     try {
       const data = await getUserJoinedTeams(userId)
-      setJoinedTeams(data)
+      const totalPages = Math.ceil(data.length / itemsPerPage)
+      setJoinedTeams(data, totalPages)
       // 检查已完成队伍的评分状态
       await checkRatingStatus(data)
     } catch (error) {
@@ -329,6 +359,15 @@ export default function HistoryPage() {
   const endIndex = startIndex + itemsPerPage
   const paginatedTeams = currentTeams.slice(startIndex, endIndex)
 
+  // 分页处理函数
+  const handleSetPage = (page: number) => {
+    if (activeTab === 'created') {
+      setMyTeamsPage(page)
+    } else {
+      setJoinedTeamsPage(page)
+    }
+  }
+
   if (loading) {
     return (
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -376,8 +415,18 @@ export default function HistoryPage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="搜索组队标题或描述..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={localSearchInput}
+            onChange={(e) => setLocalSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setSearch(localSearchInput)
+              }
+            }}
+            onBlur={() => {
+              if (localSearchInput !== searchQuery) {
+                setSearch(localSearchInput)
+              }
+            }}
             className="pl-10"
           />
         </div>
@@ -494,7 +543,7 @@ export default function HistoryPage() {
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      onClick={() => handleSetPage(Math.max(1, currentPage - 1))}
                       className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>
@@ -524,7 +573,7 @@ export default function HistoryPage() {
                     return (
                       <PaginationItem key={page}>
                         <PaginationLink
-                          onClick={() => setCurrentPage(page)}
+                          onClick={() => handleSetPage(page)}
                           isActive={currentPage === page}
                           className="cursor-pointer"
                         >
@@ -536,7 +585,7 @@ export default function HistoryPage() {
 
                   <PaginationItem>
                     <PaginationNext
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      onClick={() => handleSetPage(Math.min(totalPages, currentPage + 1))}
                       className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>

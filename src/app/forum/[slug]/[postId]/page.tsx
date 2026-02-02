@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -26,7 +26,6 @@ import type { ForumPost } from '@/types'
 export default function PostDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const user = useUser()
   const postId = parseInt(params.postId as string)
   const categorySlug = params.slug as string
@@ -128,7 +127,7 @@ export default function PostDetailPage() {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* 返回按钮 */}
       <div className="mb-6">
-        <Link href={`/forum/${post.category_slug}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`}>
+        <Link href={`/forum/${post.category_slug}`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             返回 {post.category_name}

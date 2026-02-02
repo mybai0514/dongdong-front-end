@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -36,6 +36,7 @@ import {
 import { MessageSquare, Eye, ThumbsUp, Clock, Search, Plus, TrendingUp, Loader2, Pin, Flame } from 'lucide-react'
 import { formatRelativeTime, getNowInUTC8, toUTC8 } from '@/lib/time'
 import { useUser } from '@/hooks'
+import { useForumListStore } from '@/stores'
 import { Textarea } from '@/components/ui/textarea'
 import { getForumPosts, createForumPost } from '@/lib/api'
 import type { ForumCategory, ForumPost } from '@/types'
@@ -43,17 +44,27 @@ import type { ForumCategory, ForumPost } from '@/types'
 export default function CategoryPage() {
   const params = useParams()
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const pathname = usePathname()
   const user = useUser()
   const categorySlug = params.slug as string
 
-  const [category, setCategory] = useState<ForumCategory | null>(null)
-  const [posts, setPosts] = useState<ForumPost[]>([])
-  const [loading, setLoading] = useState(true)
-  const [totalPages, setTotalPages] = useState(1)
-  const [total, setTotal] = useState(0)
-  const itemsPerPage = 12
+  // Zustand store
+  const {
+    category,
+    posts,
+    loading,
+    totalPages,
+    total,
+    currentPage,
+    searchQuery,
+    sortBy,
+    setCategory,
+    setCategorySlug,
+    setPosts,
+    setPage,
+    setSearch,
+    setSortBy,
+    setLoading,
+  } = useForumListStore()
 
   // 发帖对话框
   const [createPostDialog, setCreatePostDialog] = useState(false)
@@ -61,12 +72,22 @@ export default function CategoryPage() {
   const [newPostContent, setNewPostContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  // 从 URL 读取查询参数作为数据源
-  const currentPage = parseInt(searchParams.get('page') || '1')
-  const searchQuery = searchParams.get('search') || ''
-  const sortBy = (searchParams.get('sort') as 'latest' | 'views' | 'likes') || 'latest'
+  // 本地搜索输入框状态（用于防止每次输入都调用接口）
+  const [localSearchInput, setLocalSearchInput] = useState(searchQuery)
 
-  // 监听参数变化，获取数据
+  const itemsPerPage = 12
+
+  // 同步 store 中的 searchQuery 到本地输入框状态
+  useEffect(() => {
+    setLocalSearchInput(searchQuery)
+  }, [searchQuery])
+
+  // 初始化分类
+  useEffect(() => {
+    setCategorySlug(categorySlug)
+  }, [categorySlug])
+
+  // 监听分类和查询参数变化，获取数据
   useEffect(() => {
     fetchPosts()
   }, [categorySlug, currentPage, sortBy, searchQuery])
@@ -81,13 +102,10 @@ export default function CategoryPage() {
         search: searchQuery || undefined
       })
 
-      setPosts(data.posts || [])
+      setPosts(data.posts || [], data.total || 0, data.totalPages || 1)
       setCategory(data.category || null)
-      setTotal(data.total || 0)
-      setTotalPages(data.totalPages || 1)
     } catch (error) {
       console.error('获取帖子列表失败:', error)
-    } finally {
       setLoading(false)
     }
   }
@@ -249,25 +267,22 @@ export default function CategoryPage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="搜索帖子标题或内容..."
-            value={searchQuery}
-            onChange={(e) => {
-              const newSearch = e.target.value
-              const params = new URLSearchParams()
-              if (newSearch) params.set('search', newSearch)
-              if (sortBy !== 'latest') params.set('sort', sortBy)
-              const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
-              router.replace(newUrl)
+            value={localSearchInput}
+            onChange={(e) => setLocalSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setSearch(localSearchInput)
+              }
+            }}
+            onBlur={() => {
+              if (localSearchInput !== searchQuery) {
+                setSearch(localSearchInput)
+              }
             }}
             className="pl-10"
           />
         </div>
-        <Select value={sortBy} onValueChange={(value) => {
-          const params = new URLSearchParams()
-          if (searchQuery) params.set('search', searchQuery)
-          if (value !== 'latest') params.set('sort', value)
-          const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
-          router.replace(newUrl)
-        }}>
+        <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'latest' | 'views' | 'likes')}>
           <SelectTrigger className="w-full sm:w-45">
             <SelectValue placeholder="排序方式" />
           </SelectTrigger>
@@ -307,16 +322,8 @@ export default function CategoryPage() {
       ) : (
         <>
           <div className="space-y-2 mb-8">
-            {posts.map((post) => {
-              const postDetailParams = new URLSearchParams()
-              if (currentPage > 1) postDetailParams.set('page', currentPage.toString())
-              if (searchQuery) postDetailParams.set('search', searchQuery)
-              if (sortBy !== 'latest') postDetailParams.set('sort', sortBy)
-              const queryString = postDetailParams.toString()
-              const postUrl = `/forum/${categorySlug}/${post.id}${queryString ? `?${queryString}` : ''}`
-
-              return (
-              <Link key={post.id} href={postUrl}>
+            {posts.map((post) => (
+              <Link key={post.id} href={`/forum/${categorySlug}/${post.id}`}>
                 <div className="border rounded-md bg-card hover:shadow-sm hover:border-primary/20 transition-all duration-200 cursor-pointer py-3 px-4 mb-2">
                   <div className="flex items-start gap-3">
                     {/* 作者头像 */}
@@ -380,8 +387,7 @@ export default function CategoryPage() {
                   </div>
                 </div>
               </Link>
-              )
-            })}
+            ))}
           </div>
 
           {/* 分页 */}
@@ -392,13 +398,7 @@ export default function CategoryPage() {
                   <PaginationPrevious
                     onClick={() => {
                       if (currentPage > 1) {
-                        const params = new URLSearchParams()
-                        const newPage = currentPage - 1
-                        if (newPage > 1) params.set('page', newPage.toString())
-                        if (searchQuery) params.set('search', searchQuery)
-                        if (sortBy !== 'latest') params.set('sort', sortBy)
-                        const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
-                        router.push(newUrl)
+                        setPage(currentPage - 1)
                       }
                     }}
                     className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
@@ -415,14 +415,7 @@ export default function CategoryPage() {
                     return (
                       <PaginationItem key={page}>
                         <PaginationLink
-                          onClick={() => {
-                            const params = new URLSearchParams()
-                            if (page > 1) params.set('page', page.toString())
-                            if (searchQuery) params.set('search', searchQuery)
-                            if (sortBy !== 'latest') params.set('sort', sortBy)
-                            const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
-                            router.push(newUrl)
-                          }}
+                          onClick={() => setPage(page)}
                           isActive={currentPage === page}
                           className="cursor-pointer"
                         >
@@ -444,13 +437,7 @@ export default function CategoryPage() {
                   <PaginationNext
                     onClick={() => {
                       if (currentPage < totalPages) {
-                        const params = new URLSearchParams()
-                        const newPage = currentPage + 1
-                        params.set('page', newPage.toString())
-                        if (searchQuery) params.set('search', searchQuery)
-                        if (sortBy !== 'latest') params.set('sort', sortBy)
-                        const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
-                        router.push(newUrl)
+                        setPage(currentPage + 1)
                       }
                     }}
                     className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}

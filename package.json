@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:worker": "wrangler dev --port 8787",
+    "dev:worker": "wrangler dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -36,7 +36,8 @@
     "react-day-picker": "^9.13.0",
     "react-dom": "19.2.3",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260113.0",
