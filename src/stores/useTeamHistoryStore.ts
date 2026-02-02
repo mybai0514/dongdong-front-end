@@ -10,13 +10,9 @@ import type { Team } from '@/types'
 interface TeamHistoryState {
   // 我创建的队伍
   myTeams: Team[]
-  myTeamsPage: number
-  myTotalPages: number
 
   // 我加入的队伍
   joinedTeams: Team[]
-  joinedTeamsPage: number
-  joinedTotalPages: number
 
   // 查询参数
   searchQuery: string
@@ -28,10 +24,8 @@ interface TeamHistoryState {
   loadingJoinedTeams: boolean
 
   // Actions
-  setMyTeams: (teams: Team[], totalPages: number) => void
-  setJoinedTeams: (teams: Team[], totalPages: number) => void
-  setMyTeamsPage: (page: number) => void
-  setJoinedTeamsPage: (page: number) => void
+  setMyTeams: (teams: Team[]) => void
+  setJoinedTeams: (teams: Team[]) => void
   setSearch: (query: string) => void
   setSelectedGame: (game: string) => void
   setActiveTab: (tab: 'created' | 'joined') => void
@@ -42,11 +36,7 @@ interface TeamHistoryState {
 
 const initialState = {
   myTeams: [],
-  myTeamsPage: 1,
-  myTotalPages: 1,
   joinedTeams: [],
-  joinedTeamsPage: 1,
-  joinedTotalPages: 1,
   searchQuery: '',
   selectedGame: '全部',
   activeTab: 'created' as const,
@@ -59,33 +49,17 @@ export const useTeamHistoryStore = create<TeamHistoryState>()(
     (set) => ({
       ...initialState,
 
-      setMyTeams: (teams, totalPages) =>
-        set({ myTeams: teams, myTotalPages: totalPages, loadingMyTeams: false }),
+      setMyTeams: (teams) =>
+        set({ myTeams: teams, loadingMyTeams: false }),
 
-      setJoinedTeams: (teams, totalPages) =>
-        set({
-          joinedTeams: teams,
-          joinedTotalPages: totalPages,
-          loadingJoinedTeams: false,
-        }),
-
-      setMyTeamsPage: (page) => set({ myTeamsPage: page }),
-
-      setJoinedTeamsPage: (page) => set({ joinedTeamsPage: page }),
+      setJoinedTeams: (teams) =>
+        set({ joinedTeams: teams, loadingJoinedTeams: false }),
 
       setSearch: (query) =>
-        set({
-          searchQuery: query,
-          myTeamsPage: 1, // 搜索时重置到第一页
-          joinedTeamsPage: 1,
-        }),
+        set({ searchQuery: query }),
 
       setSelectedGame: (game) =>
-        set({
-          selectedGame: game,
-          myTeamsPage: 1, // 筛选时重置到第一页
-          joinedTeamsPage: 1,
-        }),
+        set({ selectedGame: game }),
 
       setActiveTab: (tab) => set({ activeTab: tab }),
 
@@ -100,8 +74,6 @@ export const useTeamHistoryStore = create<TeamHistoryState>()(
       storage: createJSONStorage(() => sessionStorage),
       // 只持久化必要的状态
       partialize: (state) => ({
-        myTeamsPage: state.myTeamsPage,
-        joinedTeamsPage: state.joinedTeamsPage,
         searchQuery: state.searchQuery,
         selectedGame: state.selectedGame || '全部', // 防止空值
         activeTab: state.activeTab,

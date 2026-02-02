@@ -17,7 +17,6 @@ import {
   Loader2,
   Search,
   Filter,
-  ArrowLeft,
   Star
 } from 'lucide-react'
 import {
@@ -35,15 +34,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination'
 import {
   getUserTeams,
   getUserJoinedTeams,
@@ -78,10 +68,6 @@ export default function HistoryPage() {
     searchQuery,
     selectedGame,
     activeTab,
-    myTeamsPage,
-    joinedTeamsPage,
-    myTotalPages,
-    joinedTotalPages,
     setMyTeams,
     setJoinedTeams,
     setLoadingMyTeams,
@@ -89,12 +75,7 @@ export default function HistoryPage() {
     setSearch,
     setSelectedGame,
     setActiveTab,
-    setMyTeamsPage,
-    setJoinedTeamsPage,
   } = useTeamHistoryStore()
-
-  const itemsPerPage = 10 // 每页显示 10 条历史记录
-  const currentPage = activeTab === 'created' ? myTeamsPage : joinedTeamsPage
 
   // 队伍详情弹窗状态
   const [membersDialog, setMembersDialog] = useState<{
@@ -145,21 +126,11 @@ export default function HistoryPage() {
     }
   }, [user])
 
-  // 当筛选条件改变时，重置分页到第一页
-  useEffect(() => {
-    if (activeTab === 'created') {
-      setMyTeamsPage(1)
-    } else {
-      setJoinedTeamsPage(1)
-    }
-  }, [searchQuery, selectedGame, activeTab])
-
   const fetchMyTeams = async (userId: number) => {
     setLoadingMyTeams(true)
     try {
       const data = await getUserTeams(userId)
-      const totalPages = Math.ceil(data.length / itemsPerPage)
-      setMyTeams(data, totalPages)
+      setMyTeams(data)
       // 检查已完成队伍的评分状态
       await checkRatingStatus(data)
     } catch (error) {
@@ -173,8 +144,7 @@ export default function HistoryPage() {
     setLoadingJoinedTeams(true)
     try {
       const data = await getUserJoinedTeams(userId)
-      const totalPages = Math.ceil(data.length / itemsPerPage)
-      setJoinedTeams(data, totalPages)
+      setJoinedTeams(data)
       // 检查已完成队伍的评分状态
       await checkRatingStatus(data)
     } catch (error) {
@@ -353,20 +323,9 @@ export default function HistoryPage() {
   const currentTeams = activeTab === 'created' ? filteredMyTeams : filteredJoinedTeams
   const currentLoading = activeTab === 'created' ? loadingMyTeams : loadingJoinedTeams
 
-  // 分页计算
-  const totalPages = Math.ceil(currentTeams.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedTeams = currentTeams.slice(startIndex, endIndex)
-
-  // 分页处理函数
-  const handleSetPage = (page: number) => {
-    if (activeTab === 'created') {
-      setMyTeamsPage(page)
-    } else {
-      setJoinedTeamsPage(page)
-    }
-  }
+  // 计算应显示的队伍数（用于 Tab 计数）
+  const displayedMyTeamsCount = filteredMyTeams.length
+  const displayedJoinedTeamsCount = filteredJoinedTeams.length
 
   if (loading) {
     return (
@@ -472,7 +431,7 @@ export default function HistoryPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {paginatedTeams.map(team => (
+              {currentTeams.map(team => (
                 <div
                   key={team.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -533,64 +492,6 @@ export default function HistoryPage() {
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-
-          {/* 分页组件 */}
-          {!currentLoading && currentTeams.length > 0 && totalPages > 1 && (
-            <div className="mt-6 pt-4 border-t">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => handleSetPage(Math.max(1, currentPage - 1))}
-                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                    />
-                  </PaginationItem>
-
-                  {/* 页码显示逻辑 */}
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                    // 显示第一页、最后一页、当前页及其前后各一页
-                    const showPage =
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= currentPage - 1 && page <= currentPage + 1)
-
-                    // 显示省略号
-                    const showEllipsisBefore = page === currentPage - 2 && currentPage > 3
-                    const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2
-
-                    if (showEllipsisBefore || showEllipsisAfter) {
-                      return (
-                        <PaginationItem key={page}>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      )
-                    }
-
-                    if (!showPage) return null
-
-                    return (
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          onClick={() => handleSetPage(page)}
-                          isActive={currentPage === page}
-                          className="cursor-pointer"
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )
-                  })}
-
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => handleSetPage(Math.min(totalPages, currentPage + 1))}
-                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
             </div>
           )}
         </CardContent>
