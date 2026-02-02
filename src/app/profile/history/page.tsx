@@ -49,7 +49,6 @@ import {
   type UserReputation
 } from '@/lib/api'
 import { useAuth } from '@/hooks'
-import { useTeamHistoryStore } from '@/stores'
 import type { Team, TeamMember } from '@/types'
 import { GAMES_WITH_ALL } from '@/lib/constants'
 import { formatTimeForDisplay } from '@/lib/time'
@@ -59,23 +58,19 @@ export default function HistoryPage() {
     redirectTo: '/login',
   })
 
-  // Zustand store
-  const {
-    myTeams,
-    joinedTeams,
-    loadingMyTeams,
-    loadingJoinedTeams,
-    searchQuery,
-    selectedGame,
-    activeTab,
-    setMyTeams,
-    setJoinedTeams,
-    setLoadingMyTeams,
-    setLoadingJoinedTeams,
-    setSearch,
-    setSelectedGame,
-    setActiveTab,
-  } = useTeamHistoryStore()
+  // 列表数据状态
+  const [myTeams, setMyTeams] = useState<Team[]>([])
+  const [joinedTeams, setJoinedTeams] = useState<Team[]>([])
+  const [loadingMyTeams, setLoadingMyTeams] = useState(false)
+  const [loadingJoinedTeams, setLoadingJoinedTeams] = useState(false)
+
+  // 查询参数状态
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedGame, setSelectedGame] = useState('全部')
+  const [activeTab, setActiveTab] = useState<'created' | 'joined'>('created')
+
+  // 本地搜索输入框状态（用于防止每次输入都调用接口）
+  const [localSearchInput, setLocalSearchInput] = useState(searchQuery)
 
   // 队伍详情弹窗状态
   const [membersDialog, setMembersDialog] = useState<{
@@ -111,10 +106,7 @@ export default function HistoryPage() {
   const [submittingRating, setSubmittingRating] = useState(false)
   const [ratedTeams, setRatedTeams] = useState<Set<number>>(new Set())
 
-  // 本地搜索输入框状态（用于防止每次输入都调用接口）
-  const [localSearchInput, setLocalSearchInput] = useState(searchQuery)
-
-  // 同步 store 中的 searchQuery 到本地输入框状态
+  // 同步 searchQuery 到本地输入框状态
   useEffect(() => {
     setLocalSearchInput(searchQuery)
   }, [searchQuery])
@@ -378,12 +370,12 @@ export default function HistoryPage() {
             onChange={(e) => setLocalSearchInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                setSearch(localSearchInput)
+                setSearchQuery(localSearchInput)
               }
             }}
             onBlur={() => {
               if (localSearchInput !== searchQuery) {
-                setSearch(localSearchInput)
+                setSearchQuery(localSearchInput)
               }
             }}
             className="pl-10"
