@@ -1,10 +1,9 @@
 /**
  * 历史组队状态管理 Store
- * 使用 Zustand + sessionStorage 持久化
+ * 使用 Zustand (内存存储，离开页面自动清除)
  */
 
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Team } from '@/types'
 
 interface TeamHistoryState {
@@ -44,46 +43,26 @@ const initialState = {
   loadingJoinedTeams: false,
 }
 
-export const useTeamHistoryStore = create<TeamHistoryState>()(
-  persist(
-    (set) => ({
-      ...initialState,
+export const useTeamHistoryStore = create<TeamHistoryState>((set) => ({
+  ...initialState,
 
-      setMyTeams: (teams) =>
-        set({ myTeams: teams, loadingMyTeams: false }),
+  setMyTeams: (teams) =>
+    set({ myTeams: teams, loadingMyTeams: false }),
 
-      setJoinedTeams: (teams) =>
-        set({ joinedTeams: teams, loadingJoinedTeams: false }),
+  setJoinedTeams: (teams) =>
+    set({ joinedTeams: teams, loadingJoinedTeams: false }),
 
-      setSearch: (query) =>
-        set({ searchQuery: query }),
+  setSearch: (query) =>
+    set({ searchQuery: query }),
 
-      setSelectedGame: (game) =>
-        set({ selectedGame: game }),
+  setSelectedGame: (game) =>
+    set({ selectedGame: game }),
 
-      setActiveTab: (tab) => set({ activeTab: tab }),
+  setActiveTab: (tab) => set({ activeTab: tab }),
 
-      setLoadingMyTeams: (loading) => set({ loadingMyTeams: loading }),
+  setLoadingMyTeams: (loading) => set({ loadingMyTeams: loading }),
 
-      setLoadingJoinedTeams: (loading) => set({ loadingJoinedTeams: loading }),
+  setLoadingJoinedTeams: (loading) => set({ loadingJoinedTeams: loading }),
 
-      reset: () => set(initialState),
-    }),
-    {
-      name: 'team-history-storage', // sessionStorage key
-      storage: createJSONStorage(() => sessionStorage),
-      // 只持久化必要的状态
-      partialize: (state) => ({
-        searchQuery: state.searchQuery,
-        selectedGame: state.selectedGame || '全部', // 防止空值
-        activeTab: state.activeTab,
-      }),
-      // 从 sessionStorage 恢复时，修复空值问题
-      onRehydrateStorage: () => (state) => {
-        if (state && !state.selectedGame) {
-          state.selectedGame = '全部'
-        }
-      },
-    }
-  )
-)
+  reset: () => set(initialState),
+}))

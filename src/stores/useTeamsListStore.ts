@@ -1,10 +1,9 @@
 /**
  * 队伍列表状态管理 Store
- * 使用 Zustand + sessionStorage 持久化
+ * 使用 Zustand (内存存储，离开页面自动清除)
  */
 
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Team } from '@/types'
 
 interface TeamsListState {
@@ -46,56 +45,35 @@ const initialState = {
   joiningTeamId: null,
 }
 
-export const useTeamsListStore = create<TeamsListState>()(
-  persist(
-    (set) => ({
-      ...initialState,
+export const useTeamsListStore = create<TeamsListState>((set) => ({
+  ...initialState,
 
-      setTeams: (teams, total, totalPages) =>
-        set({ teams, total, totalPages, loading: false }),
+  setTeams: (teams, total, totalPages) =>
+    set({ teams, total, totalPages, loading: false }),
 
-      setPage: (page) => set({ currentPage: page }),
+  setPage: (page) => set({ currentPage: page }),
 
-      setSearch: (query) =>
-        set({
-          searchQuery: query,
-          currentPage: 1, // 搜索时重置到第一页
-        }),
-
-      setSelectedGame: (game) =>
-        set({
-          selectedGame: game,
-          currentPage: 1, // 筛选时重置到第一页
-        }),
-
-      setSelectedDate: (date) =>
-        set({
-          selectedDate: date,
-          currentPage: 1, // 筛选时重置到第一页
-        }),
-
-      setLoading: (loading) => set({ loading }),
-
-      setJoiningTeamId: (id) => set({ joiningTeamId: id }),
-
-      reset: () => set(initialState),
+  setSearch: (query) =>
+    set({
+      searchQuery: query,
+      currentPage: 1, // 搜索时重置到第一页
     }),
-    {
-      name: 'teams-list-storage', // sessionStorage key
-      storage: createJSONStorage(() => sessionStorage),
-      // 只持久化必要的状态
-      partialize: (state) => ({
-        currentPage: state.currentPage,
-        searchQuery: state.searchQuery,
-        selectedGame: state.selectedGame || '全部', // 防止空值
-        selectedDate: state.selectedDate,
-      }),
-      // 从 sessionStorage 恢复时，修复空值问题
-      onRehydrateStorage: () => (state) => {
-        if (state && !state.selectedGame) {
-          state.selectedGame = '全部'
-        }
-      },
-    }
-  )
-)
+
+  setSelectedGame: (game) =>
+    set({
+      selectedGame: game,
+      currentPage: 1, // 筛选时重置到第一页
+    }),
+
+  setSelectedDate: (date) =>
+    set({
+      selectedDate: date,
+      currentPage: 1, // 筛选时重置到第一页
+    }),
+
+  setLoading: (loading) => set({ loading }),
+
+  setJoiningTeamId: (id) => set({ joiningTeamId: id }),
+
+  reset: () => set(initialState),
+}))
