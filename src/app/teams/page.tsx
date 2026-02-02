@@ -107,10 +107,18 @@ export default function TeamsPage() {
     setLocalSearchInput(searchQuery)
   }, [searchQuery])
 
+  // 当搜索条件变化时，重置到第一页
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1)
+    }
+  }, [searchQuery, selectedGame, selectedDateStr])
+
   // 获取组队列表
   useEffect(() => {
     fetchTeamsList()
-  }, [selectedGame, currentPage, searchQuery, selectedDateStr])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, selectedGame, currentPage, selectedDateStr])
 
   const fetchTeamsList = async () => {
     setLoading(true)
@@ -310,7 +318,7 @@ export default function TeamsPage() {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="搜索组队标题或描述..."
+            placeholder="搜索组队标题、描述或ID..."
             value={localSearchInput}
             onChange={(e) => setLocalSearchInput(e.target.value)}
             onKeyDown={(e) => {
@@ -686,6 +694,7 @@ function TeamCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <Badge variant="outline" className="shrink-0 text-xs font-mono">ID: {team.id}</Badge>
               <Badge variant="outline" className="shrink-0">{team.game}</Badge>
               {getStatusBadge(team.status, team.member_count, team.max_members)}
               {memberStatus?.isMember && (

@@ -35,15 +35,30 @@ teamsRouter.get('/', async (c) => {
 
     let allTeams = await query.orderBy(desc(teams.created_at)).all()
 
-    // 前端筛选：搜索和日期（因为 Drizzle ORM 的 like 查询在 D1 上可能有限制）
+    // 搜索过滤：支持 ID、标题、描述的模糊搜索
     if (search) {
-      const searchLower = search.toLowerCase()
-      allTeams = allTeams.filter(team =>
-        team.title.toLowerCase().includes(searchLower) ||
-        (team.description && team.description.toLowerCase().includes(searchLower))
-      )
+      const searchLower = search.toLowerCase().trim()
+      // 检查是否是纯数字（ID 搜索）
+      const isNumeric = /^\d+$/.test(searchLower)
+
+      allTeams = allTeams.filter(team => {
+        // 如果搜索词是数字，优先按 ID 精确匹配
+        if (isNumeric) {
+          const searchId = parseInt(searchLower)
+          if (team.id === searchId) {
+            return true
+          }
+        }
+
+        // 其次按标题和描述进行模糊匹配
+        return (
+          team.title.toLowerCase().includes(searchLower) ||
+          (team.description && team.description.toLowerCase().includes(searchLower))
+        )
+      })
     }
 
+    // 日期筛选
     if (date) {
       allTeams = allTeams.filter(team => {
         try {
