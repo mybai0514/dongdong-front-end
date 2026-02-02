@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { GamepadIcon, Users, MessageSquare, User, LogOut, Clock, MessagesSquare } from 'lucide-react'
 import {
@@ -16,7 +16,12 @@ import { logout } from '@/lib/api'
 
 export function Navbar() {
   const router = useRouter()
+  const pathname = usePathname()
   const user = useUser()
+
+  const isActive = (path: string) => {
+    return pathname.startsWith(path)
+  }
 
   const handleLogout = async () => {
     try {
@@ -43,21 +48,33 @@ export function Navbar() {
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
           <Link
             href="/teams"
-            className="flex items-center space-x-1 transition-colors hover:text-primary"
+            className={`flex items-center space-x-1 transition-colors border-b-2 pb-1 ${
+              isActive('/teams')
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-primary'
+            }`}
           >
             <Users className="h-4 w-4" />
             <span>找队友</span>
           </Link>
           <Link
             href="/forum"
-            className="flex items-center space-x-1 transition-colors hover:text-primary"
+            className={`flex items-center space-x-1 transition-colors border-b-2 pb-1 ${
+              isActive('/forum')
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-primary'
+            }`}
           >
             <MessagesSquare className="h-4 w-4" />
             <span>论坛</span>
           </Link>
           <Link
             href="/feedback"
-            className="flex items-center space-x-1 transition-colors hover:text-primary"
+            className={`flex items-center space-x-1 transition-colors border-b-2 pb-1 ${
+              isActive('/feedback')
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-primary'
+            }`}
           >
             <MessageSquare className="h-4 w-4" />
             <span>月度反馈</span>

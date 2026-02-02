@@ -392,15 +392,15 @@ export default function CategoryPage() {
                       <div className="flex flex-col items-end gap-1.5">
                         <div className="flex items-center gap-1.5 text-xs">
                           <Eye className="h-3.5 w-3.5 text-blue-500" />
-                          <span className="font-medium text-foreground min-w-[2rem] text-right">{post.views_count}</span>
+                          <span className="font-medium text-foreground min-w-8 text-right">{post.views_count}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs">
                           <MessageSquare className="h-3.5 w-3.5 text-green-500" />
-                          <span className="font-medium text-foreground min-w-[2rem] text-right">{post.comments_count}</span>
+                          <span className="font-medium text-foreground min-w-8 text-right">{post.comments_count}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs">
                           <ThumbsUp className="h-3.5 w-3.5 text-red-500" />
-                          <span className="font-medium text-foreground min-w-[2rem] text-right">{post.likes_count}</span>
+                          <span className="font-medium text-foreground min-w-8 text-right">{post.likes_count}</span>
                         </div>
                       </div>
                     </div>
