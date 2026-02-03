@@ -33,12 +33,12 @@ export default function PostDetailPage() {
   const [post, setPost] = useState<ForumPost | null>(null)
   const [loading, setLoading] = useState(true)
   const [likePending, setLikePending] = useState(false)
-  const lastFetchedPostId = useRef<number | null>(null)
+  // const lastFetchedPostId = useRef<number | null>(null)
 
   useEffect(() => {
     // 防止 React Strict Mode 下重复调用
-    if (lastFetchedPostId.current === postId) return
-    lastFetchedPostId.current = postId
+    // if (lastFetchedPostId.current === postId) return
+    // lastFetchedPostId.current = postId
 
     fetchPost()
   }, [postId])

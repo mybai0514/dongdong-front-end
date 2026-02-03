@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -68,9 +68,6 @@ export default function HistoryPage() {
   const [selectedGame, setSelectedGame] = useState('全部')
   const [activeTab, setActiveTab] = useState<'created' | 'joined'>('created')
 
-  // 本地搜索输入框状态（用于防止每次输入都调用接口）
-  const [localSearchInput, setLocalSearchInput] = useState(searchQuery)
-
   // 队伍详情弹窗状态
   const [membersDialog, setMembersDialog] = useState<{
     open: boolean
@@ -105,13 +102,12 @@ export default function HistoryPage() {
   const [submittingRating, setSubmittingRating] = useState(false)
   const [ratedTeams, setRatedTeams] = useState<Set<number>>(new Set())
 
-  // 同步 searchQuery 到本地输入框状态
-  useEffect(() => {
-    setLocalSearchInput(searchQuery)
-  }, [searchQuery])
+  // 防止严格模式下重复初始化
+  const initializedRef = useRef(false)
 
   useEffect(() => {
-    if (user) {
+    if (user && !initializedRef.current) {
+      initializedRef.current = true
       fetchMyTeams(user.id)
       fetchJoinedTeamsList(user.id)
     }
@@ -223,11 +219,9 @@ export default function HistoryPage() {
         loading: false
       })
       // 初始化评分数据（使用 user_id 作为 key）
-      const initialRatings: Record<number, { rating: number; tags: RatingTag[] }> = {}
-      otherMembers.forEach(member => {
-        initialRatings[member.user_id] = { rating: 0, tags: [] }
-      })
-      setRatings(initialRatings)
+      setRatings(Object.fromEntries(
+        otherMembers.map(member => [member.user_id, { rating: 0, tags: [] }])
+      ))
     } catch (err) {
       if (err instanceof ApiError) {
         toast.error(err.message || '获取队伍信息失败')
@@ -273,6 +267,18 @@ export default function HistoryPage() {
     return end < now
   }
 
+  // 过滤队伍的通用函数
+  const filterTeams = useCallback((teams: Team[]) => {
+    const completed = teams.filter(team => isTeamCompleted(team.end_time))
+    return completed.filter(team => {
+      const matchSearch = team.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         team.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      if (!matchSearch) return false
+      if (selectedGame !== '全部' && team.game !== selectedGame) return false
+      return true
+    })
+  }, [searchQuery, selectedGame])
+
   const getContactIcon = (method: string) => {
     switch (method) {
       case 'wechat': return '微信'
@@ -283,32 +289,15 @@ export default function HistoryPage() {
   }
 
   // 筛选已完成的队伍
-  const completedMyTeams = myTeams.filter(team => isTeamCompleted(team.end_time))
-  const completedJoinedTeams = joinedTeams.filter(team => isTeamCompleted(team.end_time))
+  const completedMyTeams = useMemo(() => myTeams.filter(team => isTeamCompleted(team.end_time)), [myTeams])
+  const completedJoinedTeams = useMemo(() => joinedTeams.filter(team => isTeamCompleted(team.end_time)), [joinedTeams])
 
   // 应用搜索和游戏筛选
-  const filteredMyTeams = completedMyTeams.filter(team => {
-    const matchSearch = team.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       team.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    if (!matchSearch) return false
-    if (selectedGame !== '全部' && team.game !== selectedGame) return false
-    return true
-  })
-
-  const filteredJoinedTeams = completedJoinedTeams.filter(team => {
-    const matchSearch = team.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       team.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    if (!matchSearch) return false
-    if (selectedGame !== '全部' && team.game !== selectedGame) return false
-    return true
-  })
+  const filteredMyTeams = useMemo(() => filterTeams(myTeams), [myTeams, filterTeams])
+  const filteredJoinedTeams = useMemo(() => filterTeams(joinedTeams), [joinedTeams, filterTeams])
 
   const currentTeams = activeTab === 'created' ? filteredMyTeams : filteredJoinedTeams
   const currentLoading = activeTab === 'created' ? loadingMyTeams : loadingJoinedTeams
-
-  // 计算应显示的队伍数（用于 Tab 计数）
-  const displayedMyTeamsCount = filteredMyTeams.length
-  const displayedJoinedTeamsCount = filteredJoinedTeams.length
 
   if (loading) {
     return (
@@ -357,18 +346,8 @@ export default function HistoryPage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="搜索组队标题或描述..."
-            value={localSearchInput}
-            onChange={(e) => setLocalSearchInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                setSearchQuery(localSearchInput)
-              }
-            }}
-            onBlur={() => {
-              if (localSearchInput !== searchQuery) {
-                setSearchQuery(localSearchInput)
-              }
-            }}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
           />
         </div>
