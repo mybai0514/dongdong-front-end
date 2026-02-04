@@ -82,4 +82,6 @@ export {
   unlikeForumComment,
   dislikeForumComment,
   undislikeForumComment,
+  uploadImage,
+  deleteImage,
 } from './forum'

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:worker": "wrangler dev",
+    "dev:worker:remote": "wrangler dev --remote",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -94,6 +94,7 @@ export const forumPosts = sqliteTable('forum_posts', {
   author_id: integer('author_id').notNull().references(() => users.id, { onDelete: 'cascade' }), // 发布者 ID
   title: text('title').notNull(), // 帖子标题
   content: text('content').notNull(), // 帖子内容
+  images: text('images'), // 帖子图片（JSON 数组字符串）
   views_count: integer('views_count').notNull().default(0), // 浏览次数
   comments_count: integer('comments_count').notNull().default(0), // 评论数缓存
   likes_count: integer('likes_count').notNull().default(0), // 点赞数缓存

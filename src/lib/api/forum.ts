@@ -2,7 +2,7 @@
  * 论坛相关 API
  */
 
-import { get, post, del } from './client'
+import { get, post, del, getToken } from './client'
 import type {
   ForumCategory,
   ForumPost,
@@ -146,4 +146,54 @@ export async function dislikeForumComment(commentId: number): Promise<DislikeRes
  */
 export async function undislikeForumComment(commentId: number): Promise<DislikeResponse> {
   return del<DislikeResponse>(`/api/forum/comments/${commentId}/dislike`)
+}
+
+/**
+ * 上传图片到 R2
+ */
+export async function uploadImage(file: File): Promise<{ url: string; filename: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const apiBaseUrl = typeof window !== 'undefined'
+    ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'
+    : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'
+
+  const response = await fetch(`${apiBaseUrl}/api/upload/image`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const error = await response.json() as { error?: string }
+    throw new Error(error.error || '上传失败')
+  }
+
+  const data = await response.json() as { url: string; filename: string }
+  return { url: data.url, filename: data.filename }
+}
+
+/**
+ * 删除上传的图片
+ */
+export async function deleteImage(filename: string): Promise<void> {
+  const apiBaseUrl = typeof window !== 'undefined'
+    ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'
+    : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'
+
+  // 直接拼接文件名，不使用 encodeURIComponent，因为后端使用通配符路由
+  const response = await fetch(`${apiBaseUrl}/api/upload/image/${filename}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json() as { error?: string }
+    throw new Error(error.error || '删除失败')
+  }
 }

@@ -10,6 +10,7 @@ import usersRoutes from './routes/users'
 import teamsRoutes from './routes/teams'
 import feedbackRoutes from './routes/feedback'
 import forumRoutes from './routes/forum'
+import uploadRoutes from './routes/upload'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -27,5 +28,6 @@ app.route('/api/users', usersRoutes)
 app.route('/api/teams', teamsRoutes)
 app.route('/api/feedback', feedbackRoutes)
 app.route('/api/forum', forumRoutes)
+app.route('/api/upload', uploadRoutes)
 
 export default app

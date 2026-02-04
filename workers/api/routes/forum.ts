@@ -77,6 +77,7 @@ forumRouter.get('/:categorySlug/posts', async (c) => {
       author_id: forumPosts.author_id,
       title: forumPosts.title,
       content: forumPosts.content,
+      images: forumPosts.images,
       views_count: forumPosts.views_count,
       comments_count: forumPosts.comments_count,
       likes_count: forumPosts.likes_count,
@@ -191,6 +192,7 @@ forumRouter.get('/posts/:postId', async (c) => {
       author_id: forumPosts.author_id,
       title: forumPosts.title,
       content: forumPosts.content,
+      images: forumPosts.images,
       views_count: forumPosts.views_count,
       comments_count: forumPosts.comments_count,
       likes_count: forumPosts.likes_count,
@@ -261,7 +263,7 @@ forumRouter.get('/posts/:postId', async (c) => {
 forumRouter.post('/:categorySlug/posts', authMiddleware, async (c) => {
   try {
     const categorySlug = c.req.param('categorySlug')
-    const { title, content } = await c.req.json()
+    const { title, content, images } = await c.req.json()
     const user = c.get('user')
     const db = drizzle(c.env.DB)
 
@@ -289,12 +291,22 @@ forumRouter.post('/:categorySlug/posts', authMiddleware, async (c) => {
       return c.json({ error: '分类不存在' }, 404)
     }
 
+    // 处理图片（确保是数组且每个URL都是字符串）
+    let imagesJson: string | undefined = undefined
+    if (images && Array.isArray(images) && images.length > 0) {
+      const validImages = images.filter((img: any) => typeof img === 'string' && img.trim().length > 0)
+      if (validImages.length > 0) {
+        imagesJson = JSON.stringify(validImages)
+      }
+    }
+
     // 创建帖子
     const result = await db.insert(forumPosts).values({
       category_id: category.id,
       author_id: user.id,
       title: title.trim(),
       content: content.trim(),
+      images: imagesJson,
       created_at: new Date(),
       updated_at: new Date()
     }).returning().get()

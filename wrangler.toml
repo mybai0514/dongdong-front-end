@@ -6,3 +6,16 @@ compatibility_date = "2024-01-01"
 binding = "DB"
 database_name = "dongdong-db"
 database_id = "259e4b39-fac5-4850-a3c9-d30c4f280268"
+
+# R2 存储桶配置
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "dongdong-assets"
+preview_bucket_name = "dongdong-assets"
+
+# 环境变量
+# 注意：本地开发时不设置 R2_PUBLIC_URL，让代码自动使用本地图片服务
+# 生产环境必须设置 R2_PUBLIC_URL
+
+[env.production]
+vars = { R2_PUBLIC_URL = "https://pub-e05511feedde4cf6ae01d294d19a978b.r2.dev" }

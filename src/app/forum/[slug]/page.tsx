@@ -43,11 +43,13 @@ import {
   Loader2,
   Pin,
   Flame,
+  X,
+  Image,
 } from 'lucide-react';
 import { formatRelativeTime, getNowInUTC8, toUTC8 } from '@/lib/time';
 import { useUser } from '@/hooks';
 import { Textarea } from '@/components/ui/textarea';
-import { getForumPosts, createForumPost } from '@/lib/api';
+import { getForumPosts, createForumPost, uploadImage, deleteImage } from '@/lib/api';
 import type { ForumCategory, ForumPost } from '@/types';
 
 export default function CategoryPage() {
@@ -75,6 +77,8 @@ export default function CategoryPage() {
   const [createPostDialog, setCreatePostDialog] = useState(false);
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
+  const [uploadedImages, setUploadedImages] = useState<Array<{ url: string; filename: string }>>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // 本地搜索输入框状态（用于防止每次输入都调用接口）
@@ -146,6 +150,50 @@ export default function CategoryPage() {
     updateQueryParams({ page: page.toString() });
   };
 
+  const handleAddImage = async (file: File) => {
+    if (!file) {
+      toast.warning('请选择图片');
+      return;
+    }
+
+    // 验证文件大小（5MB）
+    if (file.size > 5 * 1024 * 1024) {
+      toast.warning('文件过大，最大支持 5MB');
+      return;
+    }
+
+    // 验证文件类型
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      toast.warning('仅支持 JPEG、PNG、WebP、GIF 格式');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const { url, filename } = await uploadImage(file);
+      setUploadedImages([...uploadedImages, { url, filename }]);
+      toast.success('图片上传成功');
+    } catch (error) {
+      console.error('上传图片失败:', error);
+      const errorMessage = error instanceof Error ? error.message : '上传失败';
+      toast.error(errorMessage);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveImage = async (index: number) => {
+    const image = uploadedImages[index];
+    try {
+      await deleteImage(image.filename);
+      setUploadedImages(uploadedImages.filter((_, i) => i !== index));
+      toast.success('图片已删除');
+    } catch (error) {
+      console.error('删除图片失败:', error);
+      toast.error('删除失败，请重试');
+    }
+  };
+
   const handleCreatePost = async () => {
     if (!user) {
       router.push(`/login?redirect=/forum/${categorySlug}`);
@@ -172,12 +220,14 @@ export default function CategoryPage() {
       await createForumPost(categorySlug, {
         title: newPostTitle.trim(),
         content: newPostContent.trim(),
+        images: uploadedImages.length > 0 ? uploadedImages.map(img => img.url) : undefined,
       });
 
       // 关闭对话框并重置表单
       setCreatePostDialog(false);
       setNewPostTitle('');
       setNewPostContent('');
+      setUploadedImages([]);
 
       // 重新加载帖子列表
       await fetchPosts();
@@ -412,10 +462,28 @@ export default function CategoryPage() {
                         </div>
                       </div>
 
-                      {/* 内容预览 */}
-                      <p className="text-sm text-muted-foreground line-clamp-1 mb-2">
-                        {truncateText(post.content, 100)}
-                      </p>
+                      {/* 内容预览和图片指示 */}
+                      <div className="flex items-start gap-2 mb-2">
+                        <p className="text-sm text-muted-foreground line-clamp-1 flex-1">
+                          {truncateText(post.content, 100)}
+                        </p>
+                        {post.images && (() => {
+                          try {
+                            const images = JSON.parse(post.images);
+                            if (Array.isArray(images) && images.length > 0) {
+                              return (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                                  <Image className="h-3.5 w-3.5" />
+                                  <span>{images.length}</span>
+                                </div>
+                              );
+                            }
+                          } catch (e) {
+                            // 解析失败，不显示
+                          }
+                          return null;
+                        })()}
+                      </div>
 
                       {/* 底部信息区域 */}
                       <div className="flex items-center justify-between gap-4 mt-auto">
@@ -539,7 +607,18 @@ export default function CategoryPage() {
       )}
 
       {/* 发帖对话框 */}
-      <Dialog open={createPostDialog} onOpenChange={setCreatePostDialog}>
+      <Dialog
+        open={createPostDialog}
+        onOpenChange={(open) => {
+          setCreatePostDialog(open);
+          if (!open) {
+            // 关闭时重置表单
+            setNewPostTitle('');
+            setNewPostContent('');
+            setUploadedImages([]);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>发布新帖子</DialogTitle>
@@ -573,6 +652,85 @@ export default function CategoryPage() {
                 {newPostContent.length}/10000
               </p>
             </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">图片（可选）</label>
+              <div className="flex gap-2 mb-3">
+                <label className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-dashed border-muted-foreground rounded-lg cursor-pointer hover:border-primary hover:bg-muted transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        Array.from(e.target.files).forEach((file) => {
+                          handleAddImage(file);
+                        });
+                        e.target.value = ''; // 清除选择
+                      }
+                    }}
+                    disabled={isUploading}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>上传中...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        <span>点击选择或拖拽图片</span>
+                      </>
+                    )}
+                  </div>
+                </label>
+              </div>
+              {uploadedImages.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-foreground">已上传图片 ({uploadedImages.length})</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 h-24">
+                    {uploadedImages.map((image, index) => (
+                      <div
+                        key={index}
+                        className="relative group rounded-lg overflow-hidden border border-muted-foreground/20 bg-muted"
+                      >
+                        <img
+                          src={image.url}
+                          alt={`预览 ${index + 1}`}
+                          className="w-full h-24 object-cover"
+                          onError={(e) => {
+                            // 图片加载失败时显示占位符
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                            const parent = target.parentElement
+                            if (parent && !parent.querySelector('.error-placeholder')) {
+                              const placeholder = document.createElement('div')
+                              placeholder.className = 'error-placeholder absolute inset-0 flex items-center justify-center text-xs text-muted-foreground'
+                              placeholder.textContent = '加载失败'
+                              parent.appendChild(placeholder)
+                            }
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRemoveImage(index)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -580,7 +738,7 @@ export default function CategoryPage() {
               onClick={() => setCreatePostDialog(false)}
               disabled={submitting}
             >
-              取消
+              关闭
             </Button>
             <Button onClick={handleCreatePost} disabled={submitting}>
               {submitting ? (

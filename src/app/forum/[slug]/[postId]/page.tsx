@@ -225,6 +225,34 @@ export default function PostDetailPage() {
             </div>
           </div>
 
+          {/* 帖子图片 */}
+          {post.images && (() => {
+            try {
+              const images = JSON.parse(post.images);
+              if (Array.isArray(images) && images.length > 0) {
+                return (
+                  <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {images.map((image: string, index: number) => (
+                      <div key={index} className="rounded-lg overflow-hidden border">
+                        <img
+                          src={image}
+                          alt={`图片 ${index + 1}`}
+                          className="w-full h-auto object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+            } catch (e) {
+              console.error('解析图片数据失败:', e);
+            }
+            return null;
+          })()}
+
           {/* 点赞和反赞按钮 */}
           <div className="mt-8 pt-6 border-t flex gap-3">
             <Button

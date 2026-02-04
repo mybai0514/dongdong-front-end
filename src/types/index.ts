@@ -35,6 +35,7 @@ export type {
   CommentStatus,
   CreateCommentFormData,
   LikeResponse,
+  DislikeResponse,
 } from './forum'
 
 // API 响应类型

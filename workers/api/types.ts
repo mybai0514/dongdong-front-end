@@ -4,7 +4,9 @@ import { drizzle } from 'drizzle-orm/d1'
 
 // Cloudflare Workers 环境绑定类型
 export type Bindings = {
+  R2_PUBLIC_URL?: string  // R2 公开 URL（可选，本地开发时为空）
   DB: D1Database
+  ASSETS: R2Bucket // R2 存储桶用于图片
 }
 
 // Drizzle 数据库实例类型

@@ -24,6 +24,7 @@ export interface ForumPost {
   author_id: number
   title: string
   content: string
+  images?: string | null // JSON 字符串数组
   views_count: number
   comments_count: number
   likes_count: number
@@ -57,6 +58,7 @@ export interface PaginatedPostsResponse {
 export interface CreatePostFormData {
   title: string
   content: string
+  images?: string[]
 }
 
 // 评论状态
