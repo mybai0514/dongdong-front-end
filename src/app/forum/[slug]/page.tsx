@@ -59,6 +59,10 @@ export default function CategoryPage() {
   const user = useUser();
   const categorySlug = params.slug as string;
 
+  // 常量定义
+  const MAX_IMAGES = 5; // 最多上传图片数量
+  const itemsPerPage = 12;
+
   // 从 URL 查询参数获取状态
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
   const searchQuery = searchParams.get('search') || '';
@@ -77,14 +81,13 @@ export default function CategoryPage() {
   const [createPostDialog, setCreatePostDialog] = useState(false);
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]); // 本地选择的文件
   const [uploadedImages, setUploadedImages] = useState<Array<{ url: string; filename: string }>>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // 本地搜索输入框状态（用于防止每次输入都调用接口）
   const [localSearchInput, setLocalSearchInput] = useState(searchQuery);
-
-  const itemsPerPage = 12;
 
   // 监听分类和查询参数变化，获取数据
   useEffect(() => {
@@ -156,6 +159,12 @@ export default function CategoryPage() {
       return;
     }
 
+    // 检查图片数量限制
+    if (selectedFiles.length >= MAX_IMAGES) {
+      toast.warning(`最多只能上传${MAX_IMAGES}张图片`);
+      return;
+    }
+
     // 验证文件大小（5MB）
     if (file.size > 5 * 1024 * 1024) {
       toast.warning('文件过大，最大支持 5MB');
@@ -168,30 +177,13 @@ export default function CategoryPage() {
       return;
     }
 
-    setIsUploading(true);
-    try {
-      const { url, filename } = await uploadImage(file);
-      setUploadedImages([...uploadedImages, { url, filename }]);
-      toast.success('图片上传成功');
-    } catch (error) {
-      console.error('上传图片失败:', error);
-      const errorMessage = error instanceof Error ? error.message : '上传失败';
-      toast.error(errorMessage);
-    } finally {
-      setIsUploading(false);
-    }
+    // 只保存到本地状态，不立即上传
+    setSelectedFiles([...selectedFiles, file]);
   };
 
-  const handleRemoveImage = async (index: number) => {
-    const image = uploadedImages[index];
-    try {
-      await deleteImage(image.filename);
-      setUploadedImages(uploadedImages.filter((_, i) => i !== index));
-      toast.success('图片已删除');
-    } catch (error) {
-      console.error('删除图片失败:', error);
-      toast.error('删除失败，请重试');
-    }
+  const handleRemoveImage = (index: number) => {
+    // 从本地文件列表中移除
+    setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
   };
 
   const handleCreatePost = async () => {
@@ -217,16 +209,28 @@ export default function CategoryPage() {
 
     setSubmitting(true);
     try {
+      // 先上传所有图片
+      let imageUrls: string[] = [];
+      if (selectedFiles.length > 0) {
+        setIsUploading(true);
+        const uploadPromises = selectedFiles.map(file => uploadImage(file));
+        const uploadResults = await Promise.all(uploadPromises);
+        imageUrls = uploadResults.map(result => result.url);
+        setIsUploading(false);
+      }
+
+      // 创建帖子
       await createForumPost(categorySlug, {
         title: newPostTitle.trim(),
         content: newPostContent.trim(),
-        images: uploadedImages.length > 0 ? uploadedImages.map(img => img.url) : undefined,
+        images: imageUrls.length > 0 ? imageUrls : undefined,
       });
 
       // 关闭对话框并重置表单
       setCreatePostDialog(false);
       setNewPostTitle('');
       setNewPostContent('');
+      setSelectedFiles([]);
       setUploadedImages([]);
 
       // 重新加载帖子列表
@@ -239,6 +243,7 @@ export default function CategoryPage() {
       toast.error(errorMessage);
     } finally {
       setSubmitting(false);
+      setIsUploading(false);
     }
   };
 
@@ -615,6 +620,7 @@ export default function CategoryPage() {
             // 关闭时重置表单
             setNewPostTitle('');
             setNewPostContent('');
+            setSelectedFiles([]);
             setUploadedImages([]);
           }
         }}
@@ -653,22 +659,38 @@ export default function CategoryPage() {
               </p>
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">图片（可选）</label>
+              <label className="text-sm font-medium mb-2 block">
+                图片（可选，最多{MAX_IMAGES}张）
+              </label>
               <div className="flex gap-2 mb-3">
-                <label className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-dashed border-muted-foreground rounded-lg cursor-pointer hover:border-primary hover:bg-muted transition-colors">
+                <label className={`flex-1 flex items-center justify-center px-4 py-3 border-2 border-dashed rounded-lg transition-colors ${
+                  selectedFiles.length >= MAX_IMAGES
+                    ? 'border-muted-foreground/30 bg-muted/50 cursor-not-allowed'
+                    : 'border-muted-foreground cursor-pointer hover:border-primary hover:bg-muted'
+                }`}>
                   <input
                     type="file"
                     multiple
                     accept="image/jpeg,image/png,image/webp,image/gif"
                     onChange={(e) => {
                       if (e.target.files) {
-                        Array.from(e.target.files).forEach((file) => {
-                          handleAddImage(file);
-                        });
-                        e.target.value = ''; // 清除选择
+                        const files = Array.from(e.target.files);
+                        const remainingSlots = MAX_IMAGES - selectedFiles.length;
+
+                        if (files.length > remainingSlots) {
+                          toast.warning(`最多只能上传${remainingSlots}张图片`);
+                          files.slice(0, remainingSlots).forEach((file) => {
+                            handleAddImage(file);
+                          });
+                        } else {
+                          files.forEach((file) => {
+                            handleAddImage(file);
+                          });
+                        }
+                        e.target.value = '';
                       }
                     }}
-                    disabled={isUploading}
+                    disabled={isUploading || selectedFiles.length >= MAX_IMAGES}
                     className="hidden"
                   />
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -677,54 +699,47 @@ export default function CategoryPage() {
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span>上传中...</span>
                       </>
+                    ) : selectedFiles.length >= MAX_IMAGES ? (
+                      <>
+                        <Image className="h-4 w-4" />
+                        <span>已达到上传上限</span>
+                      </>
                     ) : (
                       <>
                         <Plus className="h-4 w-4" />
-                        <span>点击选择或拖拽图片</span>
+                        <span>点击选择图片（{selectedFiles.length}/{MAX_IMAGES}）</span>
                       </>
                     )}
                   </div>
                 </label>
               </div>
-              {uploadedImages.length > 0 && (
+              {selectedFiles.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-foreground">已上传图片 ({uploadedImages.length})</p>
+                    <p className="text-xs font-medium text-foreground">
+                      已选择图片 ({selectedFiles.length}/{MAX_IMAGES})
+                    </p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 h-24">
-                    {uploadedImages.map((image, index) => (
+                  <div className="grid grid-cols-5 gap-2 h-22">
+                    {selectedFiles.map((file, index) => (
                       <div
                         key={index}
                         className="relative group rounded-lg overflow-hidden border border-muted-foreground/20 bg-muted"
                       >
                         <img
-                          src={image.url}
+                          src={URL.createObjectURL(file)}
                           alt={`预览 ${index + 1}`}
-                          className="w-full h-24 object-cover"
-                          onError={(e) => {
-                            // 图片加载失败时显示占位符
-                            const target = e.target as HTMLImageElement
-                            target.style.display = 'none'
-                            const parent = target.parentElement
-                            if (parent && !parent.querySelector('.error-placeholder')) {
-                              const placeholder = document.createElement('div')
-                              placeholder.className = 'error-placeholder absolute inset-0 flex items-center justify-center text-xs text-muted-foreground'
-                              placeholder.textContent = '加载失败'
-                              parent.appendChild(placeholder)
-                            }
-                          }}
+                          className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleRemoveImage(index)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       </div>
                     ))}
                   </div>
