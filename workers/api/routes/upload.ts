@@ -58,6 +58,7 @@ uploadRouter.post('/image', authMiddleware, async (c) => {
     if (isLocalDev) {
       // 本地开发：使用本地 API 路由提供图片
       // 从请求头中获取 origin，自动适配不同端口
+      // c.req.url 是 Hono 框架提供的完整请求 URL
       const origin = new URL(c.req.url).origin
       imageUrl = `${origin}/api/upload/serve/${filename}`
     } else {
